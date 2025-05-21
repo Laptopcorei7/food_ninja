@@ -25,3 +25,17 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: BentonSansRegular
+      fonts:
+        - asset: assets/fonts/BentonSans Regular.otf
+
+    - family: BentonSansBold
+      fonts:
+        - asset: assets/fonts/BentonSans Bold.otf
+
+    - family: BentonSansMedium
+      fonts:
+        - asset: assets/fonts/BentonSans Medium.otf

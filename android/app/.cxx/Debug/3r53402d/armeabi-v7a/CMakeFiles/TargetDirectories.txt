@@ -1,0 +1,2 @@
+D:/wsl/food_ninja/android/app/.cxx/Debug/3r53402d/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/wsl/food_ninja/android/app/.cxx/Debug/3r53402d/armeabi-v7a/CMakeFiles/rebuild_cache.dir
