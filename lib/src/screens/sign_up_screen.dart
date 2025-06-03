@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -8,15 +9,19 @@ class SignUpScreen extends StatefulWidget {
   _SignUpState createState() => _SignUpState();
 }
 
+bool _keepSignedIn = false;
+bool _emailMe = false;
+bool _obscurePassword = true;
+
 class _SignUpState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background Image
+          // Background
           Positioned(
             top: 0,
             left: 0,
@@ -25,126 +30,70 @@ class _SignUpState extends State<SignUpScreen> {
               'assets/images/pattern.png',
               fit: BoxFit.cover,
               height: 812,
-              width: 375, // adjust to match your Figma design
+              width: 236,
             ),
           ),
 
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               child: Column(
                 children: [
                   // Logo
                   Image.asset(
-                    'assets/images/logo.png', // Replace with your logo asset
+                    'assets/images/logo.png',
                     height: 203,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // Title
                   const Text(
-                    'Login To Your Account',
+                    'SignUp For Free',
                     style: TextStyle(
                       fontFamily: 'BentonSansBold',
                       fontSize: 20,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  // Email Input
-                  TextField(
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      hintText: 'Email',
-                      hintStyle: const TextStyle(
-                        fontFamily: 'BentonSansRegular',
-                        color: Colors.grey,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFF4F4F4),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFF4F4F4),
-                          width: 2,
-                        ), // When focused
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  _usernameField(),
 
-                  // Password Input
-                  TextField(
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      hintStyle: const TextStyle(
-                        fontFamily: 'BentonSansRegular',
-                        color: Colors.grey,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFF4F4F4),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFF4F4F4),
-                          width: 2,
-                        ), // When focused
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Social Text
-                  const Text(
-                    'Or Continue With',
-                    style: TextStyle(
-                      fontFamily: 'BentonSansBold',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  _emailField(),
 
-                  // Social Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      socialButton('Facebook', 'assets/images/facebook.png'),
-                      const SizedBox(width: 16),
-                      socialButton('Google', 'assets/images/google.png'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Forgot Password
+                  _passwordField(),
+
+                  const SizedBox(height: 20),
+
+                  _checkbox(),
+
+                  const SizedBox(height: 45),
+
+                  const MajorButton(textonButton: 'Create Account'),
+
+                  const SizedBox(height: 20),
+
                   TextButton(
                     onPressed: () {},
-                    child: const Text(
-                      'Forgot Your Password?',
-                      style: TextStyle(
-                        decoration: TextDecoration.underline,
-                        decorationColor: Colors.green,
-                        fontFamily: 'BentonSansMedium',
-                        fontSize: 12,
-                        color: Colors.green,
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(
+                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Login Button
-                  const SizedBox(
-                    width: double.infinity,
-                    child: Center(
-                      child: MajorButton(
-                        textonButton: 'Login',
+                      blendMode: BlendMode.srcIn,
+                      child: const Text(
+                        'already have an Account?',
+                        style: TextStyle(
+                          fontFamily: 'BentonSansMedium',
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.transparent,
+                        ),
                       ),
                     ),
                   ),
@@ -157,29 +106,168 @@ class _SignUpState extends State<SignUpScreen> {
     );
   }
 
-  Widget socialButton(String label, String iconPath) {
-    return ElevatedButton.icon(
-      onPressed: () {},
-      icon: Image.asset(
-        iconPath,
-        height: 25,
-        width: 25,
+  Widget _usernameField() {
+    return TextField(
+      style: const TextStyle(
+        fontFamily: 'BentonSansRegular',
       ),
-      label: Text(
-        label,
-        style: const TextStyle(
-          fontFamily: 'BentonSansMedium',
+      decoration: InputDecoration(
+        hintText: 'Name',
+        hintStyle: const TextStyle(
+          fontFamily: 'BentonSansRegular',
+          color: Colors.grey,
+        ),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            'assets/images/profile.png',
+            width: 20,
+            height: 20,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    );
+  }
+
+  Widget _emailField() {
+    return TextField(
+      keyboardType: TextInputType.emailAddress,
+      style: const TextStyle(
+        fontFamily: 'BentonSansRegular',
+      ),
+      decoration: InputDecoration(
+        hintText: 'Email',
+        hintStyle: const TextStyle(
+          fontFamily: 'BentonSansRegular',
+          color: Colors.grey,
+        ),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            'assets/images/email.png',
+            width: 20,
+            height: 20,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    );
+  }
+
+  Widget _passwordField() {
+    return TextField(
+      obscureText: _obscurePassword,
+      decoration: InputDecoration(
+        hintText: 'Password',
+        hintStyle: const TextStyle(
+          fontFamily: 'BentonSansRegular',
+          color: Colors.grey,
+        ),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            'assets/images/lock.png',
+            width: 20,
+            height: 20,
+          ),
+        ),
+        suffixIcon: IconButton(
+          icon: Image.asset(
+            _obscurePassword
+                ? 'assets/images/hide.png'
+                : 'assets/images/show.png',
+            width: 20,
+            height: 20,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFF4F4F4),
+            width: 2,
+          ), // When focused
         ),
       ),
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.black,
-        backgroundColor: Colors.white,
-        side: const BorderSide(color: Color(0xFFF4F4F4)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        minimumSize: const Size(100, 50), // width, height (adjust as needed)
-      ),
+    );
+  }
+
+  Widget _checkbox() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            CustomCheckbox(
+              value: _keepSignedIn,
+              onChanged: (val) => setState(() => _keepSignedIn = val),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Keep me signed in',
+              style: TextStyle(
+                fontFamily: 'BentonSansBook',
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFBDBDBD),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            CustomCheckbox(
+              value: _emailMe,
+              onChanged: (val) => setState(() => _emailMe = val),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Email me about special prices',
+              style: TextStyle(
+                fontFamily: 'BentonSansBook',
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFBDBDBD),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

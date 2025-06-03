@@ -20,7 +20,7 @@ class MajorButton extends StatelessWidget {
           gradient: const LinearGradient(
             colors: [
               Color(0xFF53E88B),
-              Color.fromARGB(255, 9, 150, 92), // Green with 80% opacity
+              Color(0xFF15BE77),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -34,7 +34,7 @@ class MajorButton extends StatelessWidget {
             vertical: 20,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min, // Prevents stretching
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
