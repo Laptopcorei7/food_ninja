@@ -132,7 +132,8 @@ class _SignInState extends State<SignInScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ).createShader(
-                          Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                      ),
                       blendMode: BlendMode.srcIn,
                       child: const Text(
                         'Forget Password?',
@@ -140,8 +141,7 @@ class _SignInState extends State<SignInScreen> {
                           fontFamily: 'BentonSansMedium',
                           fontSize: 12,
                           decoration: TextDecoration.underline,
-                          decorationColor: Colors
-                              .transparent, // Hide underline to replace with custom
+                          decorationColor: Colors.transparent,
                         ),
                       ),
                     ),
