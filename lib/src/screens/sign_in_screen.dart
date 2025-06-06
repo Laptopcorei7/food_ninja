@@ -31,7 +31,7 @@ class _SignInState extends State<SignInScreen> {
 
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 45),
               child: Column(
                 children: [
                   // Logo

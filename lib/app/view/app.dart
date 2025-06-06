@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/l10n/l10n.dart';
+import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_screen.dart';
 
@@ -16,8 +17,9 @@ class App extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/signup',
+      initialRoute: '/onboarding',
       routes: {
+        '/onboarding': (context) => const OnboardingScreen(),
         '/login': (context) => const SignInScreen(),
         '/signup': (context) => const SignUpScreen(),
       },
