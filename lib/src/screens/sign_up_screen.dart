@@ -6,7 +6,7 @@ class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  _SignUpState createState() => _SignUpState();
+  State<SignUpScreen> createState() => _SignUpState();
 }
 
 bool _keepSignedIn = false;

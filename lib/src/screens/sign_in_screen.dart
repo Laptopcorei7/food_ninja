@@ -5,7 +5,7 @@ class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
   @override
-  _SignInState createState() => _SignInState();
+  State<SignInScreen> createState() => _SignInState();
 }
 
 class _SignInState extends State<SignInScreen> {
@@ -16,7 +16,6 @@ class _SignInState extends State<SignInScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background Image
           Positioned(
             top: 0,
             left: 0,
@@ -28,7 +27,6 @@ class _SignInState extends State<SignInScreen> {
               width: 375,
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 45),
