@@ -71,7 +71,11 @@ class _SignUpState extends State<SignUpScreen> {
 
                   const SizedBox(height: 45),
 
-                  const MajorButton(textonButton: 'Create Account'),
+                  const MajorButton(
+                    horizontal: 50,
+                    vertical: 20,
+                    textonButton: 'Create Account',
+                  ),
 
                   const SizedBox(height: 20),
 

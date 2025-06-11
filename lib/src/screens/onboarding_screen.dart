@@ -113,8 +113,7 @@ class FirstOnboardingScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
-                fontFamily: 'BentonSans Bold',
-                fontWeight: FontWeight.bold,
+                fontFamily: 'BentonSansBold',
               ),
             ),
           ),
@@ -125,12 +124,14 @@ class FirstOnboardingScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                fontFamily: 'BentonSans Book',
+                fontFamily: 'BentonSansBook',
               ),
             ),
           ),
           const SizedBox(height: 35),
           MajorButton(
+            horizontal: 50,
+            vertical: 20,
             textonButton: 'Next',
             onPress: () {
               Navigator.of(context).push(
@@ -180,8 +181,7 @@ class SecondOnboardingScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
-                fontFamily: 'BentonSans Bold',
-                fontWeight: FontWeight.bold,
+                fontFamily: 'BentonSansBold',
               ),
             ),
           ),
@@ -192,12 +192,14 @@ class SecondOnboardingScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                fontFamily: 'BentonSans Book',
+                fontFamily: 'BentonSansBook',
               ),
             ),
           ),
           const SizedBox(height: 35),
           MajorButton(
+            horizontal: 50,
+            vertical: 20,
             textonButton: 'Next',
             onPress: () {
               Navigator.of(context)

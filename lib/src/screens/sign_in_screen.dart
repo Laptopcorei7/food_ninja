@@ -151,6 +151,8 @@ class _SignInState extends State<SignInScreen> {
                     width: double.infinity,
                     child: Center(
                       child: MajorButton(
+                        horizontal: 50,
+                        vertical: 20,
                         textonButton: 'Login',
                       ),
                     ),

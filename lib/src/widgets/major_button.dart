@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 class MajorButton extends StatelessWidget {
   const MajorButton({
+    required this.horizontal,
+    required this.vertical,
     required this.textonButton,
     this.onPress,
     super.key,
   });
-
+  final double horizontal;
+  final double vertical;
   final String textonButton;
   final VoidCallback? onPress;
 
@@ -29,9 +32,9 @@ class MajorButton extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade300),
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 50,
-            vertical: 20,
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontal,
+            vertical: vertical,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
