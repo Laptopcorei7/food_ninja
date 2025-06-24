@@ -4,6 +4,8 @@ import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_screen.dart';
+import 'package:food_ninja/src/screens/upload_photo_screen.dart';
+import 'package:food_ninja/src/screens/upload_preview_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -18,8 +20,10 @@ class App extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/process',
+      initialRoute: '/uploadphoto',
       routes: {
+        '/uploadpreview': (context) => const UploadPreviewScreen(),
+        '/uploadphoto': (context) => const UploadPhotoScreen(),
         '/onboarding': (context) => const LoadingScreen(),
         '/login': (context) => const SignInScreen(),
         '/signup': (context) => const SignUpScreen(),
