@@ -14,21 +14,22 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      home: const SignupSuccessScreen(),
       theme: ThemeData(
         appBarTheme: AppBarTheme(
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/uploadphoto',
-      routes: {
-        '/uploadpreview': (context) => const UploadPreviewScreen(),
-        '/uploadphoto': (context) => const UploadPhotoScreen(),
-        '/onboarding': (context) => const LoadingScreen(),
-        '/login': (context) => const SignInScreen(),
-        '/signup': (context) => const SignUpScreen(),
-        '/process': (context) => const SignUpProcessScreen(),
-      },
+      initialRoute: '/signup',
+      // routes: {
+      //   '/uploadpreview': (context) => const UploadPreviewScreen(),
+      //   '/uploadphoto': (context) => const UploadPhotoScreen(),
+      //   '/onboarding': (context) => const LoadingScreen(),
+      //   '/login': (context) => const SignInScreen(),
+      //   '/signup': (context) => const SignUpScreen(),
+      //   '/process': (context) => const SignUpProcessScreen(),
+      // },
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );

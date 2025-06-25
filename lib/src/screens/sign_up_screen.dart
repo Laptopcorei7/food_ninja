@@ -275,3 +275,77 @@ class _SignUpState extends State<SignUpScreen> {
     );
   }
 }
+
+class SignupSuccessScreen extends StatelessWidget {
+  const SignupSuccessScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'assets/images/pattern.png',
+              fit: BoxFit.cover,
+              height: 812,
+              width: 236,
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 227),
+                Center(
+                  child: Image.asset(
+                    'assets/images/success.png',
+                    fit: BoxFit.cover,
+                    height: 162,
+                    width: 172,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(
+                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                  ),
+                  blendMode: BlendMode.srcIn,
+                  child: const Text(
+                    'Congrats!',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontFamily: 'BentonSansBold',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'Your Profile Is Ready For Use',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontFamily: 'BentonSansBold',
+                  ),
+                ),
+                const SizedBox(height: 100),
+                const MajorButton(
+                  horizontal: 50,
+                  vertical: 20,
+                  textonButton: 'Try Order',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
