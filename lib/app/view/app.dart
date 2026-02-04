@@ -22,14 +22,14 @@ class App extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/signup',
-      // routes: {
-      //   '/uploadpreview': (context) => const UploadPreviewScreen(),
-      //   '/uploadphoto': (context) => const UploadPhotoScreen(),
-      //   '/onboarding': (context) => const LoadingScreen(),
-      //   '/login': (context) => const SignInScreen(),
-      //   '/signup': (context) => const SignUpScreen(),
-      //   '/process': (context) => const SignUpProcessScreen(),
-      // },
+      routes: {
+        '/uploadpreview': (context) => const UploadPreviewScreen(),
+        '/uploadphoto': (context) => const UploadPhotoScreen(),
+        '/onboarding': (context) => const LoadingScreen(),
+        '/login': (context) => const SignInScreen(),
+        '/signup': (context) => const SignUpScreen(),
+        '/process': (context) => const SignUpProcessScreen(),
+      },
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
