@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -79,28 +80,7 @@ class _SignUpState extends State<SignUpScreen> {
 
                   const SizedBox(height: 20),
 
-                  TextButton(
-                    onPressed: () {},
-                    child: ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ).createShader(
-                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                      ),
-                      blendMode: BlendMode.srcIn,
-                      child: const Text(
-                        'already have an Account?',
-                        style: TextStyle(
-                          fontFamily: 'BentonSansMedium',
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                          decorationColor: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _alreadyuser(context),
                 ],
               ),
             ),
@@ -274,6 +254,36 @@ class _SignUpState extends State<SignUpScreen> {
       ],
     );
   }
+}
+
+Widget _alreadyuser(BuildContext context) {
+  return TextButton(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(builder: (context) => const SignInScreen()),
+      );
+    },
+    child: ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      blendMode: BlendMode.srcIn,
+      child: const Text(
+        'already have an Account?',
+        style: TextStyle(
+          fontFamily: 'BentonSansMedium',
+          fontSize: 12,
+          decoration: TextDecoration.underline,
+          decorationColor: Colors.transparent,
+        ),
+      ),
+    ),
+  );
 }
 
 class SignupSuccessScreen extends StatelessWidget {

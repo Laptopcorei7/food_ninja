@@ -21,7 +21,7 @@ class App extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/signup',
+      initialRoute: '/onboarding',
       routes: {
         '/uploadpreview': (context) => const UploadPreviewScreen(),
         '/uploadphoto': (context) => const UploadPhotoScreen(),

@@ -88,7 +88,7 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
   Widget imagePreview() {
     return Center(
       child: Stack(
-        alignment: Alignment.topRight, // Align X button to the top right
+        alignment: Alignment.topRight,
         children: [
           // Image preview box
           Container(
@@ -98,10 +98,12 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade300),
-              image: DecorationImage(
-                image: FileImage(File(widget.imagePath!)),
-                fit: BoxFit.cover,
-              ),
+              image: widget.imagePath != null
+                  ? DecorationImage(
+                      image: FileImage(File(widget.imagePath!)),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
           ),
 
