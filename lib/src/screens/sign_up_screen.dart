@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
@@ -25,7 +27,6 @@ class _SignUpState extends State<SignUpScreen> {
   bool _emailMe = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isNavigatingToSignIn = false;
 
   @override
   void dispose() {
@@ -93,14 +94,14 @@ class _SignUpState extends State<SignUpScreen> {
   }
 
   Future<void> _goToSignIn() async {
-    setState(() => _isNavigatingToSignIn = true);
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
     await Future<void>.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
-    await Navigator.push<void>(
-      context,
+    nav.pop(); // dismiss overlay
+    await nav.push<void>(
       MaterialPageRoute<void>(builder: (_) => const SignInScreen()),
     );
-    if (mounted) setState(() => _isNavigatingToSignIn = false);
   }
 
   @override
@@ -310,15 +311,6 @@ class _SignUpState extends State<SignUpScreen> {
   }
 
   Widget _alreadyUser() {
-    if (_isNavigatingToSignIn) {
-      return const SizedBox(
-        height: 36,
-        child: CircularProgressIndicator(
-          strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
-        ),
-      );
-    }
     return TextButton(
       onPressed: _goToSignIn,
       child: ShaderMask(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
@@ -43,8 +45,13 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
     );
 
     if (confirmed != true || !mounted) return;
+
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
     await _authService.deleteAccount();
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    nav.pop(); // dismiss overlay
+    await nav.pushReplacementNamed('/signup');
   }
 
   @override
