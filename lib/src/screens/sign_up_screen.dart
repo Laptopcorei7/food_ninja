@@ -6,6 +6,7 @@ import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
+
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -25,7 +26,6 @@ class _SignUpState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _isNavigatingToSignIn = false;
-  bool _signedUp = false;
 
   @override
   void dispose() {
@@ -33,12 +33,6 @@ class _SignUpState extends State<SignUpScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  void _clearFields() {
-    _nameController.clear();
-    _emailController.clear();
-    _passwordController.clear();
   }
 
   Future<void> _handleSignUp() async {
@@ -63,7 +57,6 @@ class _SignUpState extends State<SignUpScreen> {
     try {
       await _authService.signup(name, email, password);
       if (!mounted) return;
-      setState(() => _signedUp = true);
 
       await showDialog<void>(
         context: context,
@@ -71,21 +64,18 @@ class _SignUpState extends State<SignUpScreen> {
         builder: (ctx) => AppDialog(
           imagePath: 'assets/images/success.png',
           title: 'Account Created!',
-          message:
-              "Welcome to Food Ninja! Let's finish setting up your profile.",
+          message: "Welcome to Food Ninja! Let's finish setting up your profile.",
           primaryLabel: 'Continue',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
       );
 
       if (!mounted) return;
-      await Navigator.push<void>(
+      // pushReplacement removes SignUpScreen from the stack — no stale form to go back to
+      await Navigator.pushReplacement<void, void>(
         context,
         MaterialPageRoute<void>(builder: (_) => const SignUpProcessScreen()),
       );
-
-      // User came back from SignUpProcessScreen — clear form so it feels fresh
-      if (mounted) _clearFields();
     } catch (e) {
       if (!mounted) return;
       await showDialog<void>(
@@ -102,43 +92,6 @@ class _SignUpState extends State<SignUpScreen> {
     }
   }
 
-  Future<void> _handleBackPress() async {
-    final hasContent = _nameController.text.isNotEmpty ||
-        _emailController.text.isNotEmpty ||
-        _passwordController.text.isNotEmpty;
-
-    if (!hasContent && !_signedUp) {
-      Navigator.of(context).pop();
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AppDialog(
-        title: 'Leave Sign Up?',
-        message: _signedUp
-            ? 'Going back will delete your newly created account. You will need to sign up again to continue.'
-            : 'Going back will clear all the information you have entered.',
-        primaryLabel: _signedUp ? 'Delete Account & Go Back' : 'Clear & Go Back',
-        primaryIsDestructive: true,
-        secondaryLabel: 'Stay Here',
-        onPrimary: () => Navigator.of(ctx).pop(true),
-        onSecondary: () => Navigator.of(ctx).pop(false),
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    if (_signedUp) {
-      await _authService.deleteAccount();
-      if (mounted) setState(() => _signedUp = false);
-    }
-
-    _clearFields();
-    if (mounted) Navigator.of(context).pop();
-  }
-
   Future<void> _goToSignIn() async {
     setState(() => _isNavigatingToSignIn = true);
     await Future<void>.delayed(const Duration(milliseconds: 1500));
@@ -152,13 +105,7 @@ class _SignUpState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope<Object?>(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _handleBackPress();
-      },
-      child: Scaffold(
+    return Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         body: Stack(
@@ -225,8 +172,7 @@ class _SignUpState extends State<SignUpScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _usernameField() {
