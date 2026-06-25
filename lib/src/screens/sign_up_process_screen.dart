@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
@@ -19,6 +20,7 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
   final _authService = AuthService();
+  final _userService = UserService();
 
   @override
   void dispose() {
@@ -52,6 +54,50 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
     if (!mounted) return;
     nav.pop(); // dismiss overlay
     await nav.pushReplacementNamed('/signup');
+  }
+
+  Future<void> _handleNext() async {
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final phone = _mobileController.text.trim();
+
+    if (firstName.isEmpty || lastName.isEmpty || phone.isEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Missing Fields',
+          message: 'Please fill in your first name, last name, and phone number.',
+          primaryLabel: 'Got it',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+      return;
+    }
+
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
+    try {
+      await _userService.updateProfile(firstName, lastName, phone);
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await nav.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => VerificationScreen(phoneNumber: phone),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Error',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'Try Again',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    }
   }
 
   @override
@@ -128,17 +174,7 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                         horizontal: 75,
                         vertical: 23,
                         textonButton: 'Next',
-                        onPress: () {
-                          final phone = _mobileController.text.trim();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => VerificationScreen(
-                                phoneNumber: phone,
-                              ),
-                            ),
-                          );
-                        },
+                        onPress: _handleNext,
                       ),
                     ),
                   ],

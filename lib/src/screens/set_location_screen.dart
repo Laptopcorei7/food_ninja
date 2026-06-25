@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_up_screen.dart';
+import 'package:food_ninja/src/services/user_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -12,11 +16,53 @@ class SetLocationScreen extends StatefulWidget {
 
 class _SetLocationScreenState extends State<SetLocationScreen> {
   final TextEditingController _locationController = TextEditingController();
+  final _userService = UserService();
 
   @override
   void dispose() {
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleNext() async {
+    final address = _locationController.text.trim();
+
+    if (address.isEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Enter Location',
+          message: 'Please enter your delivery address to continue.',
+          primaryLabel: 'Got it',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+      return;
+    }
+
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
+    try {
+      // lat/lng default to 0.0 — maps integration will update these later
+      await _userService.updateLocation(address, 0, 0);
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await nav.push<void>(
+        MaterialPageRoute<void>(builder: (_) => const SignupSuccessScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Error',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'Try Again',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    }
   }
 
   @override
@@ -81,7 +127,7 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha:0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -93,7 +139,8 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF53E88B).withValues(alpha:0.15),
+                            color:
+                                const Color(0xFF53E88B).withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -133,14 +180,7 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
                       horizontal: 75,
                       vertical: 23,
                       textonButton: 'Next',
-                      onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SignupSuccessScreen(),
-                          ),
-                        );
-                      },
+                      onPress: _handleNext,
                     ),
                   ),
                 ],
