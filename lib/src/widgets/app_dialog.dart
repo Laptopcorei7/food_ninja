@@ -1,5 +1,21 @@
 import 'package:flutter/material.dart';
 
+/// Shows a full-screen semi-transparent overlay with a centred green spinner.
+/// The caller dismisses it with Navigator.of(context).pop() when ready.
+Future<void> showLoadingOverlay(BuildContext context) async {
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black54,
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(
+        strokeWidth: 3,
+        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
+      ),
+    ),
+  );
+}
+
 class AppDialog extends StatelessWidget {
   const AppDialog({
     required this.title,
