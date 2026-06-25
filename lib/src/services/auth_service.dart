@@ -82,6 +82,61 @@ class AuthService {
 
   Future<void> logout() => _storage.delete(key: _tokenKey);
 
+  Future<void> sendOtp(String phone) async {
+    if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/otp/send');
+    final token = await getToken();
+    if (token == null) return;
+
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/auth/otp/send'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'phone': phone}),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please log in again.');
+    }
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      throw Exception((body['message'] as String?) ?? 'Failed to send OTP.');
+    }
+  }
+
+  Future<void> verifyOtp(String otp) async {
+    if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/otp/verify');
+    final token = await getToken();
+    if (token == null) throw Exception('Not logged in.');
+
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/auth/otp/verify'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'otp': otp}),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) return;
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please log in again.');
+    }
+    if (response.statusCode == 410) {
+      throw Exception('Your OTP has expired. Please request a new one.');
+    }
+    throw Exception(
+      (body['message'] as String?) ?? 'Incorrect code. Please try again.',
+    );
+  }
+
   Future<void> deleteAccount() async {
     if (kDebugMode) debugPrint('[AuthService] DELETE $_baseUrl/auth/account');
     final token = await getToken();

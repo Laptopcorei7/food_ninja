@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/set_location_screen.dart';
 import 'package:food_ninja/src/screens/upload_photo_screen.dart';
+import 'package:food_ninja/src/services/user_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -14,6 +18,46 @@ class UploadPreviewScreen extends StatefulWidget {
 }
 
 class _UploadPreviewState extends State<UploadPreviewScreen> {
+  final _userService = UserService();
+
+  Future<void> _handleNext() async {
+    if (widget.imagePath == null) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'No Photo',
+          message: 'Please select a photo before continuing.',
+          primaryLabel: 'OK',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+      return;
+    }
+
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
+    try {
+      await _userService.uploadPhoto(widget.imagePath!);
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await nav.push<void>(
+        MaterialPageRoute<void>(builder: (_) => const SetLocationScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Upload Failed',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'Try Again',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,14 +86,11 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
                       width: 45,
                       height: 45,
                       child: CustomBackButton(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // Title
                     const Text(
                       'Upload Your Photo\nProfile',
                       style: TextStyle(
@@ -67,21 +108,14 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-                    imagePreview(),
+                    _imagePreview(),
                     const SizedBox(height: 150),
                     Center(
                       child: MajorButton(
                         horizontal: 60,
                         vertical: 20,
                         textonButton: 'Next',
-                        onPress: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => const SetLocationScreen(),
-                            ),
-                          );
-                        },
+                        onPress: _handleNext,
                       ),
                     ),
                   ],
@@ -94,12 +128,11 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
     );
   }
 
-  Widget imagePreview() {
+  Widget _imagePreview() {
     return Center(
       child: Stack(
         alignment: Alignment.topRight,
         children: [
-          // Image preview box
           Container(
             width: 250,
             height: 250,
@@ -115,8 +148,6 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
                   : null,
             ),
           ),
-
-          // X button positioned at the top right of the container
           Positioned(
             top: 8,
             right: 8,

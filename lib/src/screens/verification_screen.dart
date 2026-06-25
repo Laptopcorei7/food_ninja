@@ -1,6 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/payment_method_screen.dart';
+import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -16,14 +19,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
   final List<TextEditingController> _controllers =
       List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  final _authService = AuthService();
 
   Timer? _timer;
-  int _secondsLeft = 90; // 1 minute 30 seconds
+  int _secondsLeft = 90;
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+    _sendOtp(); // fire and forget on arrival
   }
 
   void _startTimer() {
@@ -36,6 +41,76 @@ class _VerificationScreenState extends State<VerificationScreen> {
     });
   }
 
+  Future<void> _sendOtp() async {
+    try {
+      await _authService.sendOtp(widget.phoneNumber);
+    } catch (_) {
+      // Silently ignore on auto-send; user can tap Resend if needed.
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    try {
+      await _authService.sendOtp(widget.phoneNumber);
+      if (!mounted) return;
+      setState(() {
+        _secondsLeft = 90;
+        _timer?.cancel();
+      });
+      _startTimer();
+    } catch (e) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Failed to Send',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'OK',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleVerify() async {
+    final otp = _controllers.map((c) => c.text).join();
+    if (otp.length < 4) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Enter Code',
+          message: 'Please enter the 4-digit code sent to your phone.',
+          primaryLabel: 'OK',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+      return;
+    }
+
+    unawaited(showLoadingOverlay(context));
+    final nav = Navigator.of(context);
+    try {
+      await _authService.verifyOtp(otp);
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await nav.push<void>(
+        MaterialPageRoute<void>(builder: (_) => const PaymentMethodScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      nav.pop(); // dismiss overlay
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Verification Failed',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'Try Again',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    }
+  }
+
   String get _formattedTime {
     final minutes = _secondsLeft ~/ 60;
     final seconds = _secondsLeft % 60;
@@ -45,8 +120,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    for (final c in _controllers) { c.dispose(); }
-    for (final f in _focusNodes) { f.dispose(); }
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -71,7 +150,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
               width: 200,
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -98,7 +176,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     const SizedBox(height: 12),
 
                     Text(
-                      'Code send to $maskedPhone . This code will expired in $_formattedTime',
+                      'Code sent to $maskedPhone. This code will expire in $_formattedTime',
                       style: const TextStyle(
                         fontFamily: 'BentonSansBook',
                         fontSize: 14,
@@ -111,21 +189,50 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(4, _otpBox),
                     ),
-                    const SizedBox(height: 200),
+                    const SizedBox(height: 24),
+
+                    Center(
+                      child: _secondsLeft == 0
+                          ? TextButton(
+                              onPressed: _resendOtp,
+                              child: ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                  colors: [
+                                    Color(0xFF53E88B),
+                                    Color(0xFF15BE77),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ).createShader(
+                                  Rect.fromLTWH(
+                                    0,
+                                    0,
+                                    bounds.width,
+                                    bounds.height,
+                                  ),
+                                ),
+                                blendMode: BlendMode.srcIn,
+                                child: const Text(
+                                  'Resend Code',
+                                  style: TextStyle(
+                                    fontFamily: 'BentonSansMedium',
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+
+                    const SizedBox(height: 176),
 
                     Center(
                       child: MajorButton(
                         horizontal: 75,
                         vertical: 23,
                         textonButton: 'Next',
-                        onPress: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => const PaymentMethodScreen(),
-                            ),
-                          );
-                        },
+                        onPress: _handleVerify,
                       ),
                     ),
                   ],
@@ -170,10 +277,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
         ),
         onChanged: (value) {
           if (value.isNotEmpty && index < 3) {
-            // Move to next box automatically
             _focusNodes[index + 1].requestFocus();
           } else if (value.isEmpty && index > 0) {
-            // Move back on delete
             _focusNodes[index - 1].requestFocus();
           }
         },
