@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
+import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -16,9 +17,12 @@ class _SignUpState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final _authService = AuthService();
+
   bool _keepSignedIn = false;
   bool _emailMe = false;
   bool _obscurePassword = true;
+  bool _isLoading = false;
   bool _isNavigatingToSignIn = false;
 
   @override
@@ -77,19 +81,20 @@ class _SignUpState extends State<SignUpScreen> {
                   _checkbox(),
                   const SizedBox(height: 45),
 
-                  MajorButton(
-                    horizontal: 50,
-                    vertical: 20,
-                    textonButton: 'Create Account',
-                    onPress: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => const SignUpProcessScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  if (_isLoading)
+                    const CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF53E88B),
+                      ),
+                    )
+                  else
+                    MajorButton(
+                      horizontal: 50,
+                      vertical: 20,
+                      textonButton: 'Create Account',
+                      onPress: _handleSignUp,
+                    ),
 
                   const SizedBox(height: 20),
                   _alreadyUser(),
@@ -233,6 +238,39 @@ class _SignUpState extends State<SignUpScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signup(name, email, password);
+      if (!mounted) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const SignUpProcessScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _goToSignIn() async {
