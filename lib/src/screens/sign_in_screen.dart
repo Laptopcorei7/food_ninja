@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_up_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -17,7 +20,6 @@ class _SignInState extends State<SignInScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _isNavigatingToSignUp = false;
 
   @override
   void dispose() {
@@ -213,54 +215,41 @@ class _SignInState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (_isNavigatingToSignUp)
-                    const SizedBox(
-                      height: 36,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFF53E88B),
+                  TextButton(
+                    onPressed: () async {
+                      unawaited(showLoadingOverlay(context));
+                      final nav = Navigator.of(context);
+                      await Future<void>.delayed(
+                        const Duration(milliseconds: 1500),
+                      );
+                      if (!mounted) return;
+                      nav.pop(); // dismiss overlay
+                      await nav.push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SignUpScreen(),
                         ),
+                      );
+                    },
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(
+                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                       ),
-                    )
-                  else
-                    TextButton(
-                      onPressed: () async {
-                        setState(() => _isNavigatingToSignUp = true);
-                        final nav = Navigator.of(context);
-                        await Future<void>.delayed(
-                          const Duration(milliseconds: 1500),
-                        );
-                        if (!mounted) return;
-                        await nav.push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SignUpScreen(),
-                          ),
-                        );
-                        if (mounted) {
-                          setState(() => _isNavigatingToSignUp = false);
-                        }
-                      },
-                      child: ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(
-                          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                        ),
-                        blendMode: BlendMode.srcIn,
-                        child: const Text(
-                          "Don't have an account? Create one.",
-                          style: TextStyle(
-                            fontFamily: 'BentonSansMedium',
-                            fontSize: 12,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Colors.transparent,
-                          ),
+                      blendMode: BlendMode.srcIn,
+                      child: const Text(
+                        "Don't have an account? Create one.",
+                        style: TextStyle(
+                          fontFamily: 'BentonSansMedium',
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Colors.transparent,
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
