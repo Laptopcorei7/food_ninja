@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/upload_preview_screen.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -14,6 +13,7 @@ class UploadPhotoScreen extends StatefulWidget {
 
 class _UploadPhotoState extends State<UploadPhotoScreen> {
   final ImagePicker _picker = ImagePicker();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,14 +42,11 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
                       width: 45,
                       height: 45,
                       child: CustomBackButton(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // Title
                     const Text(
                       'Upload Your Photo\nProfile',
                       style: TextStyle(
@@ -68,17 +65,9 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    fromGallery(context),
+                    _fromGallery(context),
                     const SizedBox(height: 30),
-                    fromPhoto(context),
-                    const SizedBox(height: 150),
-                    const Center(
-                      child: MajorButton(
-                        horizontal: 60,
-                        vertical: 20,
-                        textonButton: 'Next',
-                      ),
-                    ),
+                    _fromCamera(context),
                   ],
                 ),
               ),
@@ -89,15 +78,16 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
     );
   }
 
-  Widget fromGallery(BuildContext context) {
+  Widget _fromGallery(BuildContext context) {
     return ElevatedButton(
       onPressed: () async {
-        final status = await Permission.storage.request();
+        // Permission.photos covers READ_MEDIA_IMAGES on Android 13+
+        // and READ_EXTERNAL_STORAGE on older Android versions
+        final status = await Permission.photos.request();
 
         if (status.isGranted) {
           final image = await _picker.pickImage(source: ImageSource.gallery);
-          if (image != null) {
-            if (!context.mounted) return; // Add this line
+          if (image != null && context.mounted) {
             await Navigator.push(
               context,
               MaterialPageRoute<void>(
@@ -112,9 +102,7 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 100),
       ),
       child: Column(
@@ -129,25 +117,21 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
           const SizedBox(height: 8),
           const Text(
             'From Gallery',
-            style: TextStyle(
-              fontFamily: 'BentonSansBold',
-              fontSize: 14,
-            ),
+            style: TextStyle(fontFamily: 'BentonSansBold', fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  Widget fromPhoto(BuildContext context) {
+  Widget _fromCamera(BuildContext context) {
     return ElevatedButton(
       onPressed: () async {
         final status = await Permission.camera.request();
 
         if (status.isGranted) {
           final image = await _picker.pickImage(source: ImageSource.camera);
-          if (image != null) {
-            if (!context.mounted) return; // Add this line
+          if (image != null && context.mounted) {
             await Navigator.push(
               context,
               MaterialPageRoute<void>(
@@ -162,9 +146,7 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 100),
       ),
       child: Column(
@@ -179,10 +161,7 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
           const SizedBox(height: 8),
           const Text(
             'Take Photo',
-            style: TextStyle(
-              fontFamily: 'BentonSansBold',
-              fontSize: 14,
-            ),
+            style: TextStyle(fontFamily: 'BentonSansBold', fontSize: 14),
           ),
         ],
       ),
