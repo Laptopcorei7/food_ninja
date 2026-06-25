@@ -81,4 +81,22 @@ class AuthService {
   Future<String?> getToken() => _storage.read(key: _tokenKey);
 
   Future<void> logout() => _storage.delete(key: _tokenKey);
+
+  Future<void> deleteAccount() async {
+    if (kDebugMode) debugPrint('[AuthService] DELETE $_baseUrl/auth/account');
+    final token = await getToken();
+    if (token == null) return;
+    try {
+      await http.delete(
+        Uri.parse('$_baseUrl/auth/account'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      // Silently ignore network errors — user should still be able to go back
+    }
+    await logout();
+  }
 }
