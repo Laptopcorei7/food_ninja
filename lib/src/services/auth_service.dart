@@ -14,6 +14,42 @@ class AuthService {
 
   final _storage = const FlutterSecureStorage();
 
+  Future<Map<String, dynamic>> signup(
+    String name,
+    String email,
+    String password,
+  ) async {
+    if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/signup');
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$_baseUrl/auth/signup'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'name': name, 'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw Exception('Cannot reach server. Is the backend running?');
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode == 201 && body['success'] == true) {
+      final data = body['data'] as Map<String, dynamic>;
+      await _storage.write(key: _tokenKey, value: data['token'] as String);
+      return data;
+    }
+
+    if (response.statusCode == 409) {
+      throw Exception('An account with this email is already registered.');
+    }
+
+    throw Exception(
+      (body['message'] as String?) ?? 'Sign up failed. Please try again.',
+    );
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/login');
     final http.Response response;
