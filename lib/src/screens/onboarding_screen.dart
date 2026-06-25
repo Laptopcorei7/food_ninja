@@ -158,8 +158,29 @@ class FirstOnboardingScreen extends StatelessWidget {
   }
 }
 
-class SecondOnboardingScreen extends StatelessWidget {
+class SecondOnboardingScreen extends StatefulWidget {
   const SecondOnboardingScreen({super.key});
+
+  @override
+  State<SecondOnboardingScreen> createState() => _SecondOnboardingScreenState();
+}
+
+class _SecondOnboardingScreenState extends State<SecondOnboardingScreen> {
+  bool _loading = false;
+
+  Future<void> _onNext() async {
+    setState(() => _loading = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 800),
+        pageBuilder: (_, __, ___) => const SignUpScreen(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,30 +218,20 @@ class SecondOnboardingScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 35),
-          MajorButton(
-            horizontal: 50,
-            vertical: 20,
-            textonButton: 'Next',
-            onPress: () {
-              Navigator.of(context)
-                  .push(_createFadeRoute(const SignUpScreen()));
-            },
-          ),
+          if (_loading)
+            const CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
+            )
+          else
+            MajorButton(
+              horizontal: 50,
+              vertical: 20,
+              textonButton: 'Get Started',
+              onPress: _onNext,
+            ),
         ],
       ),
-    );
-  }
-
-  Route<void> _createFadeRoute(Widget page) {
-    return PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
     );
   }
 }

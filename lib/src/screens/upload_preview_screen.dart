@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/set_location_screen.dart';
 import 'package:food_ninja/src/screens/upload_photo_screen.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
@@ -68,11 +69,19 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
                     const SizedBox(height: 30),
                     imagePreview(),
                     const SizedBox(height: 150),
-                    const Center(
+                    Center(
                       child: MajorButton(
                         horizontal: 60,
                         vertical: 20,
                         textonButton: 'Next',
+                        onPress: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SetLocationScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],

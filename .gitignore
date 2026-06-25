@@ -9,6 +9,10 @@
 .history
 .svn/
 migrate_working_dir/
+CLAUDE.md
+.wolf/
+.claude/
+API_CONTRACT.md
 
 # IntelliJ related
 *.iml
