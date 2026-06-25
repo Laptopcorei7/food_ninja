@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
+import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -14,6 +16,7 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
+  final _authService = AuthService();
 
   @override
   void dispose() {
@@ -23,38 +26,65 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
     super.dispose();
   }
 
+  Future<void> _handleBackPress() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AppDialog(
+        title: 'Delete Account?',
+        message:
+            'Going back will permanently delete your account. You will need to sign up again.',
+        primaryLabel: 'Delete & Go Back',
+        primaryIsDestructive: true,
+        secondaryLabel: 'Stay Here',
+        onPrimary: () => Navigator.of(ctx).pop(true),
+        onSecondary: () => Navigator.of(ctx).pop(false),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _authService.deleteAccount();
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 249, 249, 253),
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/pattern_2.png',
-              fit: BoxFit.cover,
-              height: 250,
-              width: 200,
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: const Color.fromARGB(255, 249, 249, 253),
+        body: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/pattern_2.png',
+                fit: BoxFit.cover,
+                height: 250,
+                width: 200,
+              ),
             ),
-          ),
 
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 45,
-                      height: 45,
-                      child: CustomBackButton(
-                        onTap: () => Navigator.pop(context),
+            SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: CustomBackButton(
+                          onTap: _handleBackPress,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 32),
 
                     const Text(
@@ -108,8 +138,9 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                 ),
               ),
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
