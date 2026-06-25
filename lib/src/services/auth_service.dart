@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -14,6 +15,7 @@ class AuthService {
   final _storage = const FlutterSecureStorage();
 
   Future<Map<String, dynamic>> login(String email, String password) async {
+    if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/login');
     final http.Response response;
     try {
       response = await http
