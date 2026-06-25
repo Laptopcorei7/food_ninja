@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/verification_screen.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -10,13 +11,24 @@ class SignUpProcessScreen extends StatefulWidget {
 }
 
 class _SignUpProcessState extends State<SignUpProcessScreen> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _mobileController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 249, 249, 253),
       body: Stack(
         children: [
-          // Top-right positioned pattern image
           Positioned(
             top: 0,
             left: 0,
@@ -40,14 +52,11 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                       width: 45,
                       height: 45,
                       child: CustomBackButton(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // Title
                     const Text(
                       'Fill in your bio to get\nstarted',
                       style: TextStyle(
@@ -57,7 +66,6 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Description
                     const Text(
                       'This data will be displayed in your account profile for security',
                       style: TextStyle(
@@ -65,96 +73,16 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 35), // Space below the description
+                    const SizedBox(height: 35),
 
-                    // First Name Text Field
-                    TextField(
-                      style: const TextStyle(
-                        fontFamily: 'BentonSansRegular',
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'First Name',
-                        hintStyle: const TextStyle(
-                          fontFamily: 'BentonSansRegular',
-                          color: Colors.grey,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 25), // Space between text fields
-
-                    TextField(
-                      style: const TextStyle(
-                        fontFamily: 'BentonSansRegular',
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Last Name',
-                        hintStyle: const TextStyle(
-                          fontFamily: 'BentonSansRegular',
-                          color: Colors.grey,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
+                    _buildField(_firstNameController, 'First Name'),
                     const SizedBox(height: 25),
-
-                    TextField(
-                      keyboardType:
-                          TextInputType.phone, // Suggests numeric keyboard
-                      style: const TextStyle(
-                        fontFamily: 'BentonSansRegular',
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Mobile Number',
-                        hintStyle: const TextStyle(
-                          fontFamily: 'BentonSansRegular',
-                          color: Colors.grey,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                      ),
+                    _buildField(_lastNameController, 'Last Name'),
+                    const SizedBox(height: 25),
+                    _buildField(
+                      _mobileController,
+                      'Mobile Number',
+                      keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 150),
 
@@ -163,7 +91,17 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
                         horizontal: 75,
                         vertical: 23,
                         textonButton: 'Next',
-                        onPress: () {},
+                        onPress: () {
+                          final phone = _mobileController.text.trim();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => VerificationScreen(
+                                phoneNumber: phone,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -172,6 +110,35 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildField(
+    TextEditingController controller,
+    String hint, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontFamily: 'BentonSansRegular'),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(
+          fontFamily: 'BentonSansRegular',
+          color: Colors.grey,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Colors.white),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Colors.white, width: 2),
+        ),
       ),
     );
   }

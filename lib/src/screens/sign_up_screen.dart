@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
+import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
 import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -10,19 +11,31 @@ class SignUpScreen extends StatefulWidget {
   State<SignUpScreen> createState() => _SignUpState();
 }
 
-bool _keepSignedIn = false;
-bool _emailMe = false;
-bool _obscurePassword = true;
-
 class _SignUpState extends State<SignUpScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _keepSignedIn = false;
+  bool _emailMe = false;
+  bool _obscurePassword = true;
+  bool _isNavigatingToSignIn = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background
           Positioned(
             top: 0,
             left: 0,
@@ -40,7 +53,6 @@ class _SignUpState extends State<SignUpScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               child: Column(
                 children: [
-                  // Logo
                   Image.asset(
                     'assets/images/logo.png',
                     height: 203,
@@ -57,30 +69,30 @@ class _SignUpState extends State<SignUpScreen> {
                   const SizedBox(height: 20),
 
                   _usernameField(),
-
                   const SizedBox(height: 20),
-
                   _emailField(),
-
                   const SizedBox(height: 20),
-
                   _passwordField(),
-
                   const SizedBox(height: 20),
-
                   _checkbox(),
-
                   const SizedBox(height: 45),
 
-                  const MajorButton(
+                  MajorButton(
                     horizontal: 50,
                     vertical: 20,
                     textonButton: 'Create Account',
+                    onPress: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SignUpProcessScreen(),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),
-
-                  _alreadyuser(context),
+                  _alreadyUser(),
                 ],
               ),
             ),
@@ -92,9 +104,8 @@ class _SignUpState extends State<SignUpScreen> {
 
   Widget _usernameField() {
     return TextField(
-      style: const TextStyle(
-        fontFamily: 'BentonSansRegular',
-      ),
+      controller: _nameController,
+      style: const TextStyle(fontFamily: 'BentonSansRegular'),
       decoration: InputDecoration(
         hintText: 'Name',
         hintStyle: const TextStyle(
@@ -103,24 +114,15 @@ class _SignUpState extends State<SignUpScreen> {
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: Image.asset(
-            'assets/images/profile.png',
-            width: 20,
-            height: 20,
-          ),
+          child: Image.asset('assets/images/profile.png', width: 20, height: 20),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4), width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
@@ -129,10 +131,9 @@ class _SignUpState extends State<SignUpScreen> {
 
   Widget _emailField() {
     return TextField(
+      controller: _emailController,
       keyboardType: TextInputType.emailAddress,
-      style: const TextStyle(
-        fontFamily: 'BentonSansRegular',
-      ),
+      style: const TextStyle(fontFamily: 'BentonSansRegular'),
       decoration: InputDecoration(
         hintText: 'Email',
         hintStyle: const TextStyle(
@@ -141,24 +142,15 @@ class _SignUpState extends State<SignUpScreen> {
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: Image.asset(
-            'assets/images/email.png',
-            width: 20,
-            height: 20,
-          ),
+          child: Image.asset('assets/images/email.png', width: 20, height: 20),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4), width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
@@ -167,6 +159,7 @@ class _SignUpState extends State<SignUpScreen> {
 
   Widget _passwordField() {
     return TextField(
+      controller: _passwordController,
       obscureText: _obscurePassword,
       decoration: InputDecoration(
         hintText: 'Password',
@@ -176,11 +169,7 @@ class _SignUpState extends State<SignUpScreen> {
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: Image.asset(
-            'assets/images/lock.png',
-            width: 20,
-            height: 20,
-          ),
+          child: Image.asset('assets/images/lock.png', width: 20, height: 20),
         ),
         suffixIcon: IconButton(
           icon: Image.asset(
@@ -190,24 +179,15 @@ class _SignUpState extends State<SignUpScreen> {
             width: 20,
             height: 20,
           ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFFF4F4F4),
-            width: 2,
-          ), // When focused
+          borderSide: const BorderSide(color: Color(0xFFF4F4F4), width: 2),
         ),
       ),
     );
@@ -254,36 +234,49 @@ class _SignUpState extends State<SignUpScreen> {
       ],
     );
   }
-}
 
-Widget _alreadyuser(BuildContext context) {
-  return TextButton(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute<void>(builder: (context) => const SignInScreen()),
+  Future<void> _goToSignIn() async {
+    setState(() => _isNavigatingToSignIn = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const SignInScreen()),
+    );
+    if (mounted) setState(() => _isNavigatingToSignIn = false);
+  }
+
+  Widget _alreadyUser() {
+    if (_isNavigatingToSignIn) {
+      return const SizedBox(
+        height: 36,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
+        ),
       );
-    },
-    child: ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-      ),
-      blendMode: BlendMode.srcIn,
-      child: const Text(
-        'already have an Account?',
-        style: TextStyle(
-          fontFamily: 'BentonSansMedium',
-          fontSize: 12,
-          decoration: TextDecoration.underline,
-          decorationColor: Colors.transparent,
+    }
+    return TextButton(
+      onPressed: _goToSignIn,
+      child: ShaderMask(
+        shaderCallback: (bounds) => const LinearGradient(
+          colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+        blendMode: BlendMode.srcIn,
+        child: const Text(
+          'already have an Account?',
+          style: TextStyle(
+            fontFamily: 'BentonSansMedium',
+            fontSize: 12,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.transparent,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class SignupSuccessScreen extends StatelessWidget {
@@ -324,9 +317,7 @@ class SignupSuccessScreen extends StatelessWidget {
                     colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                  ).createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
+                  ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
                   blendMode: BlendMode.srcIn,
                   child: const Text(
                     'Congrats!',
@@ -346,10 +337,17 @@ class SignupSuccessScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 100),
-                const MajorButton(
+                MajorButton(
                   horizontal: 50,
                   vertical: 20,
                   textonButton: 'Try Order',
+                  onPress: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/home',
+                      (route) => false,
+                    );
+                  },
                 ),
               ],
             ),
