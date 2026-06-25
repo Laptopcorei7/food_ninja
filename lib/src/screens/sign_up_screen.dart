@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
@@ -24,6 +25,7 @@ class _SignUpState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _isNavigatingToSignIn = false;
+  bool _signedUp = false;
 
   @override
   void dispose() {
@@ -33,76 +35,196 @@ class _SignUpState extends State<SignUpScreen> {
     super.dispose();
   }
 
+  void _clearFields() {
+    _nameController.clear();
+    _emailController.clear();
+    _passwordController.clear();
+  }
+
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Missing Fields',
+          message: 'Please fill in your name, email, and password to continue.',
+          primaryLabel: 'Got it',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signup(name, email, password);
+      if (!mounted) return;
+      setState(() => _signedUp = true);
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AppDialog(
+          imagePath: 'assets/images/success.png',
+          title: 'Account Created!',
+          message:
+              "Welcome to Food Ninja! Let's finish setting up your profile.",
+          primaryLabel: 'Continue',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+
+      if (!mounted) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => const SignUpProcessScreen()),
+      );
+
+      // User came back from SignUpProcessScreen — clear form so it feels fresh
+      if (mounted) _clearFields();
+    } catch (e) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: 'Sign Up Failed',
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'Try Again',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleBackPress() async {
+    final hasContent = _nameController.text.isNotEmpty ||
+        _emailController.text.isNotEmpty ||
+        _passwordController.text.isNotEmpty;
+
+    if (!hasContent && !_signedUp) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AppDialog(
+        title: 'Leave Sign Up?',
+        message: _signedUp
+            ? 'Going back will delete your newly created account. You will need to sign up again to continue.'
+            : 'Going back will clear all the information you have entered.',
+        primaryLabel: _signedUp ? 'Delete Account & Go Back' : 'Clear & Go Back',
+        primaryIsDestructive: true,
+        secondaryLabel: 'Stay Here',
+        onPrimary: () => Navigator.of(ctx).pop(true),
+        onSecondary: () => Navigator.of(ctx).pop(false),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    if (_signedUp) {
+      await _authService.deleteAccount();
+      if (mounted) setState(() => _signedUp = false);
+    }
+
+    _clearFields();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _goToSignIn() async {
+    setState(() => _isNavigatingToSignIn = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const SignInScreen()),
+    );
+    if (mounted) setState(() => _isNavigatingToSignIn = false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/pattern.png',
-              fit: BoxFit.cover,
-              height: 812,
-              width: 236,
-            ),
-          ),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 203,
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'SignUp For Free',
-                    style: TextStyle(
-                      fontFamily: 'BentonSansBold',
-                      fontSize: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  _usernameField(),
-                  const SizedBox(height: 20),
-                  _emailField(),
-                  const SizedBox(height: 20),
-                  _passwordField(),
-                  const SizedBox(height: 20),
-                  _checkbox(),
-                  const SizedBox(height: 45),
-
-                  if (_isLoading)
-                    const CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF53E88B),
-                      ),
-                    )
-                  else
-                    MajorButton(
-                      horizontal: 50,
-                      vertical: 20,
-                      textonButton: 'Create Account',
-                      onPress: _handleSignUp,
-                    ),
-
-                  const SizedBox(height: 20),
-                  _alreadyUser(),
-                ],
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackPress();
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/pattern.png',
+                fit: BoxFit.cover,
+                height: 812,
+                width: 236,
               ),
             ),
-          ),
-        ],
+
+            SafeArea(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: Column(
+                  children: [
+                    Image.asset('assets/images/logo.png', height: 203),
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      'SignUp For Free',
+                      style: TextStyle(
+                        fontFamily: 'BentonSansBold',
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _usernameField(),
+                    const SizedBox(height: 20),
+                    _emailField(),
+                    const SizedBox(height: 20),
+                    _passwordField(),
+                    const SizedBox(height: 20),
+                    _checkbox(),
+                    const SizedBox(height: 45),
+
+                    if (_isLoading)
+                      const CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF53E88B),
+                        ),
+                      )
+                    else
+                      MajorButton(
+                        horizontal: 50,
+                        vertical: 20,
+                        textonButton: 'Create Account',
+                        onPress: _handleSignUp,
+                      ),
+
+                    const SizedBox(height: 20),
+                    _alreadyUser(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -119,7 +241,8 @@ class _SignUpState extends State<SignUpScreen> {
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: Image.asset('assets/images/profile.png', width: 20, height: 20),
+          child:
+              Image.asset('assets/images/profile.png', width: 20, height: 20),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -240,50 +363,6 @@ class _SignUpState extends State<SignUpScreen> {
     );
   }
 
-  Future<void> _handleSignUp() async {
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      await _authService.signup(name, email, password);
-      if (!mounted) return;
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute<void>(builder: (_) => const SignUpProcessScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _goToSignIn() async {
-    setState(() => _isNavigatingToSignIn = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
-    if (!mounted) return;
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const SignInScreen()),
-    );
-    if (mounted) setState(() => _isNavigatingToSignIn = false);
-  }
-
   Widget _alreadyUser() {
     if (_isNavigatingToSignIn) {
       return const SizedBox(
@@ -355,7 +434,9 @@ class SignupSuccessScreen extends StatelessWidget {
                     colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                  ).createShader(Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+                  ).createShader(
+                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                  ),
                   blendMode: BlendMode.srcIn,
                   child: const Text(
                     'Congrats!',
