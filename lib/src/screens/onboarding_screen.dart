@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/sign_up_screen.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -171,6 +172,9 @@ class _SecondOnboardingScreenState extends State<SecondOnboardingScreen> {
   Future<void> _onNext() async {
     setState(() => _loading = true);
     await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
