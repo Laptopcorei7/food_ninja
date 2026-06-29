@@ -2,10 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // DEV_HOST is injected by scripts/run_dev.ps1 (or run_dev.sh) via --dart-define.
+  // DEV_HOST is injected by scripts/run_dev.ps1 via --dart-define.
   // Falls back to 10.0.2.2 (Android emulator → host machine) when run without the script.
   static const _devHost =
       String.fromEnvironment('DEV_HOST', defaultValue: '10.0.2.2');
@@ -29,8 +30,8 @@ class AuthService {
             body: jsonEncode({'name': name, 'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (_) {
-      throw Exception('Cannot reach server. Is the backend running?');
+    } catch (e) {
+      throw toUserError(e);
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -61,8 +62,8 @@ class AuthService {
             body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(const Duration(seconds: 15));
-    } catch (_) {
-      throw Exception('Cannot reach server. Is the backend running?');
+    } catch (e) {
+      throw toUserError(e);
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -80,6 +81,8 @@ class AuthService {
 
   Future<String?> getToken() => _storage.read(key: _tokenKey);
 
+  // Logout is local-only — it just deletes the stored token from the device.
+  // It does not make a network request and cannot fail due to poor internet.
   Future<void> logout() => _storage.delete(key: _tokenKey);
 
   Future<void> sendOtp(String phone) async {
@@ -87,16 +90,21 @@ class AuthService {
     final token = await getToken();
     if (token == null) return;
 
-    final response = await http
-        .post(
-          Uri.parse('$_baseUrl/auth/otp/send'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({'phone': phone}),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$_baseUrl/auth/otp/send'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'phone': phone}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     if (response.statusCode == 401) {
       throw Exception('Session expired. Please log in again.');
@@ -112,16 +120,21 @@ class AuthService {
     final token = await getToken();
     if (token == null) throw Exception('Not logged in.');
 
-    final response = await http
-        .post(
-          Uri.parse('$_baseUrl/auth/otp/verify'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({'otp': otp}),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$_baseUrl/auth/otp/verify'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'otp': otp}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     if (response.statusCode == 200) return;
 
@@ -150,7 +163,7 @@ class AuthService {
         },
       ).timeout(const Duration(seconds: 15));
     } catch (_) {
-      // Silently ignore network errors — user should still be able to go back
+      // Silently ignore — account deletion failure must not block back navigation
     }
     await logout();
   }
