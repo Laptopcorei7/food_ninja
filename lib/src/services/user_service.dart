@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:http/http.dart' as http;
 
 class UserService {
@@ -30,12 +31,17 @@ class UserService {
     final token = await _token();
     if (token == null) throw Exception('Not logged in.');
 
-    final response = await http
-        .get(
-          Uri.parse('$_baseUrl/users/me'),
-          headers: _authHeaders(token),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .get(
+            Uri.parse('$_baseUrl/users/me'),
+            headers: _authHeaders(token),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     _guard401(response);
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -59,17 +65,22 @@ class UserService {
     final token = await _token();
     if (token == null) throw Exception('Not logged in.');
 
-    final response = await http
-        .patch(
-          Uri.parse('$_baseUrl/users/me/profile'),
-          headers: _authHeaders(token),
-          body: jsonEncode({
-            'firstName': firstName,
-            'lastName': lastName,
-            'phone': phone,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .patch(
+            Uri.parse('$_baseUrl/users/me/profile'),
+            headers: _authHeaders(token),
+            body: jsonEncode({
+              'firstName': firstName,
+              'lastName': lastName,
+              'phone': phone,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     _guard401(response);
     if (response.statusCode == 200) return;
@@ -91,9 +102,14 @@ class UserService {
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('photo', imagePath));
 
-    final streamed =
-        await request.send().timeout(const Duration(seconds: 30));
-    final response = await http.Response.fromStream(streamed);
+    final http.Response response;
+    try {
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 30));
+      response = await http.Response.fromStream(streamed);
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     if (response.statusCode == 401) {
       throw Exception('Session expired. Please log in again.');
@@ -116,13 +132,18 @@ class UserService {
     final token = await _token();
     if (token == null) throw Exception('Not logged in.');
 
-    final response = await http
-        .patch(
-          Uri.parse('$_baseUrl/users/me/location'),
-          headers: _authHeaders(token),
-          body: jsonEncode({'address': address, 'lat': lat, 'lng': lng}),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .patch(
+            Uri.parse('$_baseUrl/users/me/location'),
+            headers: _authHeaders(token),
+            body: jsonEncode({'address': address, 'lat': lat, 'lng': lng}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     _guard401(response);
     if (response.statusCode == 200) return;
@@ -143,13 +164,18 @@ class UserService {
     final token = await _token();
     if (token == null) throw Exception('Not logged in.');
 
-    final response = await http
-        .post(
-          Uri.parse('$_baseUrl/users/me/payment-methods'),
-          headers: _authHeaders(token),
-          body: jsonEncode({'type': type, 'brand': brand, 'last4': last4}),
-        )
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$_baseUrl/users/me/payment-methods'),
+            headers: _authHeaders(token),
+            body: jsonEncode({'type': type, 'brand': brand, 'last4': last4}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
 
     _guard401(response);
     if (response.statusCode == 201) return;
