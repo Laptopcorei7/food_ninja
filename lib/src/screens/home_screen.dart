@@ -29,7 +29,7 @@ class HomeScreen extends StatelessWidget {
     await AuthService().logout();
     if (!context.mounted) return;
     nav.pop(); // dismiss overlay
-    await nav.pushNamedAndRemoveUntil('/onboarding', (route) => false);
+    await nav.pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   @override

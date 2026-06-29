@@ -10,6 +10,17 @@ import 'package:food_ninja/src/screens/upload_photo_screen.dart';
 import 'package:food_ninja/src/screens/upload_preview_screen.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum _StartRoute { onboarding, login, home }
+
+Future<_StartRoute> _resolveStartRoute() async {
+  final prefs = await SharedPreferences.getInstance();
+  final seenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+  if (!seenOnboarding) return _StartRoute.onboarding;
+  final token = await AuthService().getToken();
+  return token != null ? _StartRoute.home : _StartRoute.login;
+}
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -35,9 +46,8 @@ class App extends StatelessWidget {
         '/signup-success': (context) => const SignupSuccessScreen(),
         '/home': (context) => const HomeScreen(),
       },
-      // Check for a stored token; if found skip onboarding and go straight to home.
-      home: FutureBuilder<String?>(
-        future: AuthService().getToken(),
+      home: FutureBuilder<_StartRoute>(
+        future: _resolveStartRoute(),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Scaffold(
@@ -50,9 +60,11 @@ class App extends StatelessWidget {
               ),
             );
           }
-          return snapshot.data != null
-              ? const HomeScreen()
-              : const LoadingScreen();
+          return switch (snapshot.data) {
+            _StartRoute.home => const HomeScreen(),
+            _StartRoute.login => const SignInScreen(),
+            _ => const LoadingScreen(),
+          };
         },
       ),
     );
