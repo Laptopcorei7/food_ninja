@@ -8,3 +8,10 @@ analyzer:
     implicit-casts: true
   errors:
     lines_longer_than_80_chars: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
