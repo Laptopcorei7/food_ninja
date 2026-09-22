@@ -49,7 +49,7 @@ class _SignInState extends State<SignInScreen> {
         '/home',
         (route) => false,
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
