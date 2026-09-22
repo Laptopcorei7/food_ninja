@@ -162,7 +162,7 @@ class AuthService {
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 15));
-    } catch (_) {
+    } on Object catch (_) {
       // Silently ignore — account deletion failure must not block back navigation
     }
     await logout();

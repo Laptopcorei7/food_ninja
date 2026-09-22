@@ -77,7 +77,7 @@ class _SignUpState extends State<SignUpScreen> {
         context,
         MaterialPageRoute<void>(builder: (_) => const SignUpProcessScreen()),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       await showDialog<void>(
         context: context,

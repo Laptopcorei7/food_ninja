@@ -43,7 +43,7 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
       await nav.push<void>(
         MaterialPageRoute<void>(builder: (_) => const SetLocationScreen()),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
       await showDialog<void>(

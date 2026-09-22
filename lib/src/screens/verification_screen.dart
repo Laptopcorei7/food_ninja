@@ -28,7 +28,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void initState() {
     super.initState();
     _startTimer();
-    _sendOtp(); // fire and forget on arrival
+    unawaited(_sendOtp()); // fire and forget on arrival
   }
 
   void _startTimer() {
@@ -44,7 +44,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _sendOtp() async {
     try {
       await _authService.sendOtp(widget.phoneNumber);
-    } catch (_) {
+    } on Object catch (_) {
       // Silently ignore on auto-send; user can tap Resend if needed.
     }
   }
@@ -58,7 +58,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         _timer?.cancel();
       });
       _startTimer();
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -96,7 +96,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       await nav.push<void>(
         MaterialPageRoute<void>(builder: (_) => const PaymentMethodScreen()),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
       await showDialog<void>(

@@ -50,7 +50,7 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
       await nav.push<void>(
         MaterialPageRoute<void>(builder: (_) => const SignupSuccessScreen()),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
       await showDialog<void>(

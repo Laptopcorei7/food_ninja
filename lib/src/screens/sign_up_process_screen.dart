@@ -85,7 +85,7 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
           builder: (_) => VerificationScreen(phoneNumber: phone),
         ),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
       await showDialog<void>(
@@ -106,7 +106,7 @@ class _SignUpProcessState extends State<SignUpProcessScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        _handleBackPress();
+        unawaited(_handleBackPress());
       },
       child: Scaffold(
         backgroundColor: const Color.fromARGB(255, 249, 249, 253),
