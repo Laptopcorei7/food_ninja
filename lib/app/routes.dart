@@ -4,6 +4,7 @@ import 'package:food_ninja/src/screens/home_screen.dart';
 import 'package:food_ninja/src/screens/new_password_screen.dart';
 import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/screens/payment_method_screen.dart';
+import 'package:food_ninja/src/screens/search_screen.dart';
 import 'package:food_ninja/src/screens/set_location_screen.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
 import 'package:food_ninja/src/screens/sign_up_process_screen.dart';
@@ -28,11 +29,14 @@ abstract final class AppRoutes {
   static const forgotPassword = '/forgot-password';
   static const resetCode = '/reset-code';
   static const newPassword = '/new-password';
+  static const search = '/search';
+  static const notifications = '/notifications';
 
   /// The screen for a route name. `verify` takes the phone number,
   /// `uploadPreview` the image path and `uploadPhoto` an optional recovered
   /// photo path as the argument. `forgotPassword` takes an optional email,
-  /// `resetCode` a (method, contact) record and `newPassword` the reset token.
+  /// `resetCode` a (method, contact) record, `newPassword` the reset token
+  /// and `search` a [SearchArgs].
   static Widget? page(String? name, Object? arg) => switch (name) {
         onboarding => const LoadingScreen(),
         signIn => const SignInScreen(),
@@ -51,6 +55,8 @@ abstract final class AppRoutes {
               VerificationScreen(contact: contact, resetMethod: method),
           },
         newPassword => NewPasswordScreen(resetToken: arg! as String),
+        search => SearchScreen(args: arg! as SearchArgs),
+        notifications => const NotificationsPlaceholder(),
         _ => null,
       };
 
