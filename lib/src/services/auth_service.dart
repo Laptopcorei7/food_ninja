@@ -130,6 +130,7 @@ class AuthService {
       throw Exception('Session expired. Please log in again.');
     }
     if (response.statusCode != 200) {
+      _throwIfRateLimited(response);
       final body = decodeBody(response);
       throw Exception((body['message'] as String?) ?? 'Failed to send OTP.');
     }
@@ -158,6 +159,7 @@ class AuthService {
 
     if (response.statusCode == 200) return;
 
+    _throwIfRateLimited(response);
     final body = decodeBody(response);
     if (response.statusCode == 401) {
       throw Exception('Session expired. Please log in again.');
@@ -167,6 +169,79 @@ class AuthService {
     }
     throw Exception(
       (body['message'] as String?) ?? 'Incorrect code. Please try again.',
+    );
+  }
+
+  /// Sends a 4-digit reset code by [method] ('sms' or 'email') to [contact]
+  /// (E.164 phone or email). The server answers the same whether or not an
+  /// account exists, so this succeeds for unknown contacts too.
+  Future<void> requestPasswordReset(String method, String contact) =>
+      _postPublic(
+        'auth/forgot-password',
+        {'method': method, 'contact': contact},
+        'Failed to send the code. Please try again.',
+      );
+
+  /// Uses up the reset [code] and returns the reset token (valid 10 minutes).
+  /// Keep it in memory only; it is not a login token.
+  Future<String> verifyResetCode(String contact, String code) async {
+    final body = await _postPublic(
+      'auth/forgot-password/verify',
+      {'contact': contact, 'code': code},
+      'Incorrect code. Please try again.',
+    );
+    final data = body['data'] as Map<String, dynamic>;
+    return data['resetToken'] as String;
+  }
+
+  /// Sets the new password. No login token comes back; the user signs in.
+  Future<void> resetPassword(
+    String resetToken,
+    String newPassword,
+    String confirmPassword,
+  ) =>
+      _postPublic(
+        'auth/reset-password',
+        {
+          'resetToken': resetToken,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        },
+        'Failed to reset your password. Please try again.',
+      );
+
+  /// POSTs [payload] without an auth header and returns the body of a 200,
+  /// or throws the server's message ([fallback] when it has none).
+  Future<Map<String, dynamic>> _postPublic(
+    String path,
+    Map<String, String> payload,
+    String fallback,
+  ) async {
+    if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/$path');
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$_baseUrl/$path'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw toUserError(e);
+    }
+
+    _throwIfRateLimited(response);
+    final body = decodeBody(response);
+    if (response.statusCode == 200 && body['success'] == true) return body;
+    throw Exception((body['message'] as String?) ?? fallback);
+  }
+
+  void _throwIfRateLimited(http.Response response) {
+    if (response.statusCode != 429) return;
+    throw RateLimitException(
+      (decodeBody(response)['message'] as String?) ??
+          'Too many attempts, try again in 15 minutes',
     );
   }
 

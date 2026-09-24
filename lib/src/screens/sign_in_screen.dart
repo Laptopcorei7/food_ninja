@@ -116,8 +116,11 @@ class _SignInState extends State<SignInScreen> {
             ),
             AuthLink(
               label: 'Forgot Password?',
-              // TODO(dev): phase 2, navigate to the forgot password flow.
-              onTap: () {},
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.forgotPassword,
+                arguments: _emailController.text.trim(),
+              ),
             ),
           ],
         ),

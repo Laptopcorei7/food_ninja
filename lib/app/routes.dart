@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/forgot_password_screen.dart';
 import 'package:food_ninja/src/screens/home_screen.dart';
+import 'package:food_ninja/src/screens/new_password_screen.dart';
 import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/screens/payment_method_screen.dart';
 import 'package:food_ninja/src/screens/set_location_screen.dart';
@@ -23,22 +25,32 @@ abstract final class AppRoutes {
   static const setLocation = '/set-location';
   static const signUpSuccess = '/signup-success';
   static const home = '/home';
+  static const forgotPassword = '/forgot-password';
+  static const resetCode = '/reset-code';
+  static const newPassword = '/new-password';
 
   /// The screen for a route name. `verify` takes the phone number,
   /// `uploadPreview` the image path and `uploadPhoto` an optional recovered
-  /// photo path as the argument.
+  /// photo path as the argument. `forgotPassword` takes an optional email,
+  /// `resetCode` a (method, contact) record and `newPassword` the reset token.
   static Widget? page(String? name, Object? arg) => switch (name) {
         onboarding => const LoadingScreen(),
         signIn => const SignInScreen(),
         signUp => const SignUpScreen(),
         signUpProcess => const SignUpProcessScreen(),
-        verify => VerificationScreen(phoneNumber: arg! as String),
+        verify => VerificationScreen(contact: arg! as String),
         paymentMethod => const PaymentMethodScreen(),
         uploadPhoto => UploadPhotoScreen(recoveredImagePath: arg as String?),
         uploadPreview => UploadPreviewScreen(imagePath: arg as String?),
         setLocation => const SetLocationScreen(),
         signUpSuccess => const SignupSuccessScreen(),
         home => const HomeScreen(),
+        forgotPassword => ForgotPasswordScreen(email: arg as String?),
+        resetCode => switch (arg! as (String, String)) {
+            (final method, final contact) =>
+              VerificationScreen(contact: contact, resetMethod: method),
+          },
+        newPassword => NewPasswordScreen(resetToken: arg! as String),
         _ => null,
       };
 
