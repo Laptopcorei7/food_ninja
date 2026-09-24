@@ -6,14 +6,26 @@ import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/services/sms_code_listener.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 import 'package:food_ninja/src/widgets/setup_pattern.dart';
 
+/// Sends a 4-digit code to [contact] and checks what the user types.
+///
+/// Without [resetMethod] it verifies the signed-in user's phone during
+/// sign-up and continues to the payment method. With it ('sms' or 'email')
+/// it checks a forgot-password code and continues to the new password screen.
 class VerificationScreen extends StatefulWidget {
-  const VerificationScreen({required this.phoneNumber, super.key});
-  final String phoneNumber;
+  const VerificationScreen({
+    required this.contact,
+    this.resetMethod,
+    super.key,
+  });
+
+  final String contact;
+  final String? resetMethod;
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
@@ -29,12 +41,32 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Timer? _timer;
   int _secondsLeft = 90;
 
+  /// Wrong codes entered for the current code. The server refuses a code
+  /// after 5, even the right one, so Resend is offered then.
+  int _wrongTries = 0;
+
+  /// Set after a 429; Resend stays hidden since the server would refuse it.
+  bool _rateLimited = false;
+
+  bool get _isReset => widget.resetMethod != null;
+  bool get _bySms => widget.resetMethod != 'email';
+
   @override
   void initState() {
     super.initState();
     _startTimer();
-    unawaited(_listenForSms());
+    if (_bySms) unawaited(_listenForSms());
     unawaited(_sendOtp()); // fire and forget on arrival
+  }
+
+  Future<void> _send() => _isReset
+      ? _authService.requestPasswordReset(widget.resetMethod!, widget.contact)
+      : _authService.sendOtp(widget.contact);
+
+  /// Stops the countdown so Resend shows now.
+  void _offerResend() {
+    _timer?.cancel();
+    setState(() => _secondsLeft = 0);
   }
 
   /// Fills and submits the code when the SMS arrives (see SmsCodeListener).
@@ -65,13 +97,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   Future<void> _sendOtp() async {
     try {
-      await _authService.sendOtp(widget.phoneNumber);
+      await _send();
     } on Object catch (e) {
       debugPrint('[Verification] auto-send failed: $e');
       if (!mounted) return;
       // No code went out, so offer Resend now instead of after the countdown.
-      _timer?.cancel();
-      setState(() => _secondsLeft = 0);
+      _rateLimited = e is RateLimitException;
+      _offerResend();
       await showDialog<void>(
         context: context,
         builder: (ctx) => AppDialog(
@@ -87,16 +119,18 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _resendOtp() async {
     try {
       // The Retriever listens for 5 minutes; start a fresh listener.
-      unawaited(_listenForSms());
-      await _authService.sendOtp(widget.phoneNumber);
+      if (_bySms) unawaited(_listenForSms());
+      await _send();
       if (!mounted) return;
       setState(() {
         _secondsLeft = 90;
+        _wrongTries = 0;
         _timer?.cancel();
       });
       _startTimer();
     } on Object catch (e) {
       if (!mounted) return;
+      if (e is RateLimitException) setState(() => _rateLimited = true);
       await showDialog<void>(
         context: context,
         builder: (ctx) => AppDialog(
@@ -116,7 +150,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         context: context,
         builder: (ctx) => AppDialog(
           title: 'Enter Code',
-          message: 'Please enter the 4-digit code sent to your phone.',
+          message: 'Please enter the 4-digit code we sent you.',
           primaryLabel: 'OK',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
@@ -127,19 +161,40 @@ class _VerificationScreenState extends State<VerificationScreen> {
     unawaited(showLoadingOverlay(context));
     final nav = Navigator.of(context);
     try {
-      await _authService.verifyOtp(otp);
-      if (!mounted) return;
-      nav.pop(); // dismiss overlay
-      // Replace, so back from payment can't return to a used code.
-      await nav.pushReplacementNamed(AppRoutes.paymentMethod);
+      // Replace, so back from the next screen can't return to a used code.
+      if (_isReset) {
+        final resetToken =
+            await _authService.verifyResetCode(widget.contact, otp);
+        if (!mounted) return;
+        nav.pop(); // dismiss overlay
+        await nav.pushReplacementNamed(
+          AppRoutes.newPassword,
+          arguments: resetToken,
+        );
+      } else {
+        await _authService.verifyOtp(otp);
+        if (!mounted) return;
+        nav.pop(); // dismiss overlay
+        await nav.pushReplacementNamed(AppRoutes.paymentMethod);
+      }
     } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
+      var message = e.toString().replaceAll('Exception: ', '');
+      if (e is RateLimitException) {
+        setState(() => _rateLimited = true);
+      } else if (message.toLowerCase().contains('expired')) {
+        _offerResend();
+      } else if (++_wrongTries >= 5) {
+        _offerResend();
+        message = 'Too many wrong tries for this code. '
+            'Tap Resend Code to get a new one.';
+      }
       await showDialog<void>(
         context: context,
         builder: (ctx) => AppDialog(
           title: 'Verification Failed',
-          message: e.toString().replaceAll('Exception: ', ''),
+          message: message,
           primaryLabel: 'Try Again',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
@@ -168,9 +223,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final maskedPhone = widget.phoneNumber.length > 4
-        ? '${widget.phoneNumber.substring(0, widget.phoneNumber.length - 4)}****'
-        : widget.phoneNumber;
+    final contact = widget.contact;
+    final at = contact.indexOf('@');
+    final maskedContact = at > 0
+        ? '${contact[0]}****${contact.substring(at)}'
+        : contact.length > 4
+            ? '${contact.substring(0, contact.length - 4)}****'
+            : contact;
 
     return Scaffold(
       body: Stack(
@@ -200,7 +259,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Code sent to $maskedPhone. This code will expire in $_formattedTime',
+                      'Code sent to $maskedContact. This code will expire in $_formattedTime',
                       style: const TextStyle(
                         fontWeight: FontWeight.w300,
                         fontSize: 14,
@@ -213,7 +272,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     ),
                     const SizedBox(height: 24),
                     Center(
-                      child: _secondsLeft == 0
+                      child: _secondsLeft == 0 && !_rateLimited
                           ? TextButton(
                               onPressed: _resendOtp,
                               child: ShaderMask(

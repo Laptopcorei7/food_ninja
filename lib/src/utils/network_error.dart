@@ -12,6 +12,16 @@ class SessionExpiredException implements Exception {
   String toString() => 'Exception: Session expired. Please log in again.';
 }
 
+/// A 429: too many attempts from this device. [message] is the server's
+/// ("Too many attempts, try again in 15 minutes"), shown as-is.
+class RateLimitException implements Exception {
+  RateLimitException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'Exception: $message';
+}
+
 /// Parses a JSON object response body. Anything else (an HTML error page, a
 /// stack trace) returns an empty map, so callers fall back to their own
 /// message and the raw text never reaches the user.
