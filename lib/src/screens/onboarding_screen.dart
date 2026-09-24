@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:food_ninja/src/screens/sign_up_screen.dart';
+import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,8 +50,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Stack(
         children: [
           Positioned(
@@ -58,10 +59,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
             left: 0,
             right: 0,
             child: Image.asset(
-              'assets/images/pattern.png',
-              fit: BoxFit.cover,
-              height: 812,
-              width: 375,
+              dark
+                  ? 'assets/images/pattern_dark.png'
+                  : 'assets/images/pattern.png',
+              fit: BoxFit.fitWidth,
+              alignment: Alignment.topCenter,
             ),
           ),
           SafeArea(
@@ -78,7 +80,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
                     const CircularProgressIndicator(
                       strokeWidth: 3,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF53E88B), // Replaces gradient
+                        AppColors.green, // Replaces gradient
                       ),
                     ),
                 ],
@@ -96,145 +98,101 @@ class FirstOnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          const SizedBox(height: 40),
-          Image.asset(
-            'assets/images/art_1.png',
-            fit: BoxFit.cover,
-            height: 434,
-            width: 370,
-          ),
-          const SizedBox(height: 30),
-          const Center(
-            child: Text(
-              'Find your Comfort\nFood here',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontFamily: 'BentonSansBold',
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Center(
-            child: Text(
-              'Here You Can find a chef or dish for every\ntaste and color. Enjoy!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontFamily: 'BentonSansBook',
-              ),
-            ),
-          ),
-          const SizedBox(height: 35),
-          MajorButton(
-            horizontal: 50,
-            vertical: 20,
-            textonButton: 'Next',
-            onPress: () {
-              Navigator.of(context).push(
-                _createFadeRoute(const SecondOnboardingScreen()),
-              );
-            },
-          ),
-        ],
+    return _OnboardingPage(
+      image: 'assets/images/art_1.png',
+      title: 'Find your Comfort\nFood here',
+      body:
+          'Here You Can find a chef or dish for every\ntaste and color. Enjoy!',
+      buttonLabel: 'Next',
+      onNext: () => Navigator.of(context).push(
+        PageRouteBuilder<void>(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const SecondOnboardingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
       ),
-    );
-  }
-
-  Route<void> _createFadeRoute(Widget page) {
-    return PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
     );
   }
 }
 
-class SecondOnboardingScreen extends StatefulWidget {
+class SecondOnboardingScreen extends StatelessWidget {
   const SecondOnboardingScreen({super.key});
 
-  @override
-  State<SecondOnboardingScreen> createState() => _SecondOnboardingScreenState();
-}
-
-class _SecondOnboardingScreenState extends State<SecondOnboardingScreen> {
-  bool _loading = false;
-
-  Future<void> _onNext() async {
-    setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
-    if (!mounted) return;
+  Future<void> _onNext(BuildContext context) async {
+    final nav = Navigator.of(context);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
-    if (!mounted) return;
-    await Navigator.of(context).pushReplacement(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 800),
-        pageBuilder: (_, __, ___) => const SignUpScreen(),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
+    await nav.pushReplacementNamed(AppRoutes.signUp);
   }
 
   @override
   Widget build(BuildContext context) {
+    return _OnboardingPage(
+      image: 'assets/images/art_2.png',
+      title: 'Food Ninja is Where Your\nComfort Food Lives',
+      body: 'Enjoy a fast and smooth food delivery at\nyour doorstep',
+      buttonLabel: 'Get Started',
+      onNext: () => _onNext(context),
+    );
+  }
+}
+
+/// Artwork, title, text and button. The artwork takes whatever height is
+/// left, so the page fits short phones without overflowing.
+class _OnboardingPage extends StatelessWidget {
+  const _OnboardingPage({
+    required this.image,
+    required this.title,
+    required this.body,
+    required this.buttonLabel,
+    required this.onNext,
+  });
+
+  final String image;
+  final String title;
+  final String body;
+  final String buttonLabel;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          const SizedBox(height: 40),
-          Image.asset(
-            'assets/images/art_2.png',
-            fit: BoxFit.cover,
-            height: 434,
-            width: 370,
-          ),
-          const SizedBox(height: 30),
-          const Center(
-            child: Text(
-              'Food Ninja is Where Your\nComfort Food Lives',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontFamily: 'BentonSansBold',
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            children: [
+              Expanded(child: Image.asset(image, fit: BoxFit.contain)),
+              const SizedBox(height: 24),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Center(
-            child: Text(
-              'Enjoy a fast and smooth food delivery at\nyour doorstep',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontFamily: 'BentonSansBook',
+              const SizedBox(height: 16),
+              Text(
+                body,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w300,
+                ),
               ),
-            ),
+              const SizedBox(height: 32),
+              MajorButton(
+                horizontal: 50,
+                vertical: 20,
+                textonButton: buttonLabel,
+                onPress: onNext,
+              ),
+            ],
           ),
-          const SizedBox(height: 35),
-          if (_loading)
-            const CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
-            )
-          else
-            MajorButton(
-              horizontal: 50,
-              vertical: 20,
-              textonButton: 'Get Started',
-              onPress: _onNext,
-            ),
-        ],
+        ),
       ),
     );
   }

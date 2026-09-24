@@ -1,11 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:food_ninja/src/screens/upload_preview_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
+import 'package:food_ninja/src/widgets/setup_pattern.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
-  const UploadPhotoScreen({super.key});
+  const UploadPhotoScreen({super.key, this.recoveredImagePath});
+
+  /// A photo taken before Android closed the app during the camera step
+  /// (see app.dart); the preview opens straight away.
+  final String? recoveredImagePath;
 
   @override
   State<UploadPhotoScreen> createState() => _UploadPhotoState();
@@ -15,22 +25,77 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
   final ImagePicker _picker = ImagePicker();
 
   @override
+  void initState() {
+    super.initState();
+    final recovered = widget.recoveredImagePath;
+    if (recovered != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.pushNamed(
+          context,
+          AppRoutes.uploadPreview,
+          arguments: recovered,
+        );
+      });
+    }
+  }
+
+  Future<void> _pick(ImageSource source) async {
+    // The gallery opens Android's photo picker, which needs no permission.
+    // The camera does, because the manifest declares CAMERA.
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AppDialog(
+            title: 'Camera Access Needed',
+            message:
+                'Allow camera access in Settings to take a photo, or choose one from your gallery.',
+            primaryLabel: 'Open Settings',
+            onPrimary: () {
+              Navigator.of(ctx).pop();
+              unawaited(openAppSettings());
+            },
+            secondaryLabel: 'Not Now',
+            onSecondary: () => Navigator.of(ctx).pop(),
+          ),
+        );
+        return;
+      }
+    }
+
+    final XFile? image;
+    try {
+      // A resized JPEG stays well under the server's 5 MB limit.
+      image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1080,
+        imageQuality: 85,
+      );
+    } on PlatformException catch (e) {
+      debugPrint('[UploadPhoto] pickImage failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't open that. Please try again.")),
+      );
+      return;
+    }
+    if (image == null || !mounted) return;
+    await Navigator.pushNamed(
+      context,
+      AppRoutes.uploadPreview,
+      arguments: image.path,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 249, 249, 253),
       body: Stack(
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/pattern_2.png',
-              fit: BoxFit.cover,
-              height: 250,
-              width: 200,
-            ),
-          ),
+          const SetupPattern(),
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -42,29 +107,28 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
                       width: 45,
                       height: 45,
                       child: CustomBackButton(
-                        onTap: () => Navigator.pop(context),
+                        // maybePop: after a recovered restart there is no
+                        // earlier screen to return to.
+                        onTap: () => Navigator.maybePop(context),
                       ),
                     ),
                     const SizedBox(height: 32),
-
                     const Text(
                       'Upload Your Photo\nProfile',
                       style: TextStyle(
-                        fontFamily: 'BentonSansBold',
+                        fontWeight: FontWeight.w700,
                         fontSize: 25,
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     const Text(
                       'This data will be displayed in your account\nprofile for security',
                       style: TextStyle(
-                        fontFamily: 'BentonSansBook',
+                        fontWeight: FontWeight.w300,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 30),
-
                     _fromGallery(context),
                     const SizedBox(height: 30),
                     _fromCamera(context),
@@ -80,27 +144,11 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
 
   Widget _fromGallery(BuildContext context) {
     return ElevatedButton(
-      onPressed: () async {
-        // Permission.photos covers READ_MEDIA_IMAGES on Android 13+
-        // and READ_EXTERNAL_STORAGE on older Android versions
-        final status = await Permission.photos.request();
-
-        if (status.isGranted) {
-          final image = await _picker.pickImage(source: ImageSource.gallery);
-          if (image != null && context.mounted) {
-            await Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => UploadPreviewScreen(imagePath: image.path),
-              ),
-            );
-          }
-        }
-      },
+      onPressed: () => _pick(ImageSource.gallery),
       style: ElevatedButton.styleFrom(
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: context.colors.surface,
+        foregroundColor: context.colors.textPrimary,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 100),
@@ -117,7 +165,7 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
           const SizedBox(height: 8),
           const Text(
             'From Gallery',
-            style: TextStyle(fontFamily: 'BentonSansBold', fontSize: 14),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
         ],
       ),
@@ -126,25 +174,11 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
 
   Widget _fromCamera(BuildContext context) {
     return ElevatedButton(
-      onPressed: () async {
-        final status = await Permission.camera.request();
-
-        if (status.isGranted) {
-          final image = await _picker.pickImage(source: ImageSource.camera);
-          if (image != null && context.mounted) {
-            await Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => UploadPreviewScreen(imagePath: image.path),
-              ),
-            );
-          }
-        }
-      },
+      onPressed: () => _pick(ImageSource.camera),
       style: ElevatedButton.styleFrom(
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: context.colors.surface,
+        foregroundColor: context.colors.textPrimary,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(double.infinity, 100),
@@ -161,7 +195,7 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
           const SizedBox(height: 8),
           const Text(
             'Take Photo',
-            style: TextStyle(fontFamily: 'BentonSansBold', fontSize: 14),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
         ],
       ),

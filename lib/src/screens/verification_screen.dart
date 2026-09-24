@@ -1,11 +1,15 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:food_ninja/src/screens/payment_method_screen.dart';
+import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/services/sms_code_listener.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
+import 'package:food_ninja/src/widgets/setup_pattern.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({required this.phoneNumber, super.key});
@@ -20,6 +24,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   final _authService = AuthService();
+  final _smsListener = SmsCodeListener();
 
   Timer? _timer;
   int _secondsLeft = 90;
@@ -28,7 +33,24 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    unawaited(_listenForSms());
     unawaited(_sendOtp()); // fire and forget on arrival
+  }
+
+  /// Fills and submits the code when the SMS arrives (see SmsCodeListener).
+  Future<void> _listenForSms() async {
+    if (kDebugMode) {
+      debugPrint(
+        '[Verification] SMS app hash: ${await _smsListener.appSignature()}',
+      );
+    }
+    await _smsListener.start((code) {
+      if (!mounted) return;
+      for (var i = 0; i < 4; i++) {
+        _controllers[i].text = code[i];
+      }
+      unawaited(_handleVerify());
+    });
   }
 
   void _startTimer() {
@@ -44,13 +66,28 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _sendOtp() async {
     try {
       await _authService.sendOtp(widget.phoneNumber);
-    } on Object catch (_) {
-      // Silently ignore on auto-send; user can tap Resend if needed.
+    } on Object catch (e) {
+      debugPrint('[Verification] auto-send failed: $e');
+      if (!mounted) return;
+      // No code went out, so offer Resend now instead of after the countdown.
+      _timer?.cancel();
+      setState(() => _secondsLeft = 0);
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AppDialog(
+          title: "Couldn't Send Code",
+          message: e.toString().replaceAll('Exception: ', ''),
+          primaryLabel: 'OK',
+          onPrimary: () => Navigator.of(ctx).pop(),
+        ),
+      );
     }
   }
 
   Future<void> _resendOtp() async {
     try {
+      // The Retriever listens for 5 minutes; start a fresh listener.
+      unawaited(_listenForSms());
       await _authService.sendOtp(widget.phoneNumber);
       if (!mounted) return;
       setState(() {
@@ -93,9 +130,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
       await _authService.verifyOtp(otp);
       if (!mounted) return;
       nav.pop(); // dismiss overlay
-      await nav.push<void>(
-        MaterialPageRoute<void>(builder: (_) => const PaymentMethodScreen()),
-      );
+      // Replace, so back from payment can't return to a used code.
+      await nav.pushReplacementNamed(AppRoutes.paymentMethod);
     } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
@@ -119,6 +155,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   @override
   void dispose() {
+    unawaited(_smsListener.stop());
     _timer?.cancel();
     for (final c in _controllers) {
       c.dispose();
@@ -136,20 +173,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
         : widget.phoneNumber;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 249, 249, 253),
       body: Stack(
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/pattern_2.png',
-              fit: BoxFit.cover,
-              height: 250,
-              width: 200,
-            ),
-          ),
+          const SetupPattern(),
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -161,36 +187,31 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       width: 45,
                       height: 45,
                       child: CustomBackButton(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.maybePop(context),
                       ),
                     ),
                     const SizedBox(height: 32),
-
                     const Text(
                       'Enter 4-digit\nVerification code',
                       style: TextStyle(
-                        fontFamily: 'BentonSansBold',
+                        fontWeight: FontWeight.w700,
                         fontSize: 25,
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     Text(
                       'Code sent to $maskedPhone. This code will expire in $_formattedTime',
                       style: const TextStyle(
-                        fontFamily: 'BentonSansBook',
+                        fontWeight: FontWeight.w300,
                         fontSize: 14,
-                        color: Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 40),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(4, _otpBox),
                     ),
                     const SizedBox(height: 24),
-
                     Center(
                       child: _secondsLeft == 0
                           ? TextButton(
@@ -199,8 +220,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
                                 shaderCallback: (bounds) =>
                                     const LinearGradient(
                                   colors: [
-                                    Color(0xFF53E88B),
-                                    Color(0xFF15BE77),
+                                    AppColors.green,
+                                    AppColors.greenDark,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -216,7 +237,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                                 child: const Text(
                                   'Resend Code',
                                   style: TextStyle(
-                                    fontFamily: 'BentonSansMedium',
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -224,9 +245,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                             )
                           : const SizedBox.shrink(),
                     ),
-
                     const SizedBox(height: 176),
-
                     Center(
                       child: MajorButton(
                         horizontal: 75,
@@ -257,23 +276,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
         maxLength: 1,
         style: const TextStyle(
           fontSize: 28,
-          fontFamily: 'BentonSansBold',
+          fontWeight: FontWeight.w700,
         ),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           counterText: '',
-          filled: true,
-          fillColor: Colors.white,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.white),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Color(0xFF53E88B),
-              width: 2,
-            ),
-          ),
+          contentPadding: EdgeInsets.zero,
         ),
         onChanged: (value) {
           if (value.isNotEmpty && index < 3) {

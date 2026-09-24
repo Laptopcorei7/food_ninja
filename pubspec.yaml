@@ -12,11 +12,14 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^9.1.1
   flutter_secure_storage: ^11.2.0
+  geocoding: ^5.0.0
+  geolocator: ^14.0.3
   http: ^1.6.0
+  http_parser: ^4.1.2
   image_picker: ^1.2.3
   permission_handler: ^12.0.3
+  phone_form_field: 10.0.0
   shared_preferences: ^2.3.0
-
 dev_dependencies:
   bloc_test: ^10.0.0
   flutter_test:
@@ -29,18 +32,13 @@ flutter:
   assets:
     - assets/images/
   fonts:
-    - family: BentonSansRegular
-      fonts:
-        - asset: assets/fonts/BentonSans Regular.otf
-
-    - family: BentonSansBold
-      fonts:
-        - asset: assets/fonts/BentonSans Bold.otf
-
-    - family: BentonSansMedium
-      fonts:
-        - asset: assets/fonts/BentonSans Medium.otf
-
-    - family: BentonSansBook
+    - family: BentonSans
       fonts:
         - asset: assets/fonts/BentonSans Book.otf
+          weight: 300
+        - asset: assets/fonts/BentonSans Regular.otf
+          weight: 400
+        - asset: assets/fonts/BentonSans Medium.otf
+          weight: 500
+        - asset: assets/fonts/BentonSans Bold.otf
+          weight: 700

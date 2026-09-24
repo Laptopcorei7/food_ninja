@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 
 class MajorButton extends StatelessWidget {
   const MajorButton({
@@ -15,43 +16,32 @@ class MajorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(color: Colors.white);
+    // BentonSans reserves 0.2 em below the baseline and nothing above the
+    // capitals, so a label without descenders looks high. Moving it down by
+    // 0.1 em centres the letters in the button.
+    final nudge = (style?.fontSize ?? 16) * 0.1;
     return InkWell(
       onTap: onPress,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(15),
       child: Ink(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [
-              Color(0xFF53E88B),
-              Color(0xFF15BE77),
-            ],
+            colors: [AppColors.green, AppColors.greenDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(15),
         ),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontal,
-            vertical: vertical,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                textonButton,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'BentonSansBold',
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
+        padding: EdgeInsets.fromLTRB(
+          horizontal,
+          vertical + nudge,
+          horizontal,
+          vertical - nudge,
         ),
+        child: Text(textonButton, textAlign: TextAlign.center, style: style),
       ),
     );
   }

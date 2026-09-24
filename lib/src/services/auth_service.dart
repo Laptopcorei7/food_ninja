@@ -27,14 +27,16 @@ class AuthService {
           .post(
             Uri.parse('$_baseUrl/auth/signup'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'name': name, 'email': email, 'password': password}),
+            body: jsonEncode(
+              {'name': name, 'email': email, 'password': password},
+            ),
           )
           .timeout(const Duration(seconds: 15));
     } catch (e) {
       throw toUserError(e);
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
 
     if (response.statusCode == 201 && body['success'] == true) {
       final data = body['data'] as Map<String, dynamic>;
@@ -51,7 +53,14 @@ class AuthService {
     );
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  // Token for a sign in without "Keep me signed in": lives until the app closes.
+  static String? _sessionToken;
+
+  Future<Map<String, dynamic>> login(
+    String email,
+    String password, {
+    bool keepSignedIn = true,
+  }) async {
     if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/login');
     final http.Response response;
     try {
@@ -66,11 +75,18 @@ class AuthService {
       throw toUserError(e);
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
 
     if (response.statusCode == 200 && body['success'] == true) {
       final data = body['data'] as Map<String, dynamic>;
-      await _storage.write(key: _tokenKey, value: data['token'] as String);
+      final token = data['token'] as String;
+      if (keepSignedIn) {
+        _sessionToken = null;
+        await _storage.write(key: _tokenKey, value: token);
+      } else {
+        _sessionToken = token;
+        await _storage.delete(key: _tokenKey);
+      }
       return data;
     }
 
@@ -79,16 +95,20 @@ class AuthService {
     );
   }
 
-  Future<String?> getToken() => _storage.read(key: _tokenKey);
+  Future<String?> getToken() async =>
+      _sessionToken ?? await _storage.read(key: _tokenKey);
 
   // Logout is local-only — it just deletes the stored token from the device.
   // It does not make a network request and cannot fail due to poor internet.
-  Future<void> logout() => _storage.delete(key: _tokenKey);
+  Future<void> logout() {
+    _sessionToken = null;
+    return _storage.delete(key: _tokenKey);
+  }
 
   Future<void> sendOtp(String phone) async {
     if (kDebugMode) debugPrint('[AuthService] POST $_baseUrl/auth/otp/send');
     final token = await getToken();
-    if (token == null) return;
+    if (token == null) throw Exception('Not logged in.');
 
     final http.Response response;
     try {
@@ -110,7 +130,7 @@ class AuthService {
       throw Exception('Session expired. Please log in again.');
     }
     if (response.statusCode != 200) {
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final body = decodeBody(response);
       throw Exception((body['message'] as String?) ?? 'Failed to send OTP.');
     }
   }
@@ -138,7 +158,7 @@ class AuthService {
 
     if (response.statusCode == 200) return;
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     if (response.statusCode == 401) {
       throw Exception('Session expired. Please log in again.');
     }

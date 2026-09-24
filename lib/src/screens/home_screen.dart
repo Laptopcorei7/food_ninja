@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 
 // Placeholder home screen — will be replaced with the full home UI
@@ -29,13 +31,12 @@ class HomeScreen extends StatelessWidget {
     await AuthService().logout();
     if (!context.mounted) return;
     nav.pop(); // dismiss overlay
-    await nav.pushNamedAndRemoveUntil('/login', (route) => false);
+    await nav.pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -44,9 +45,9 @@ class HomeScreen extends StatelessWidget {
               'Home Screen\n(coming soon)',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'BentonSansBold',
+                fontWeight: FontWeight.w700,
                 fontSize: 22,
-                color: Color(0xFF53E88B),
+                color: AppColors.green,
               ),
             ),
             const SizedBox(height: 32),
@@ -55,9 +56,9 @@ class HomeScreen extends StatelessWidget {
               child: const Text(
                 'Log Out',
                 style: TextStyle(
-                  fontFamily: 'BentonSansMedium',
+                  fontWeight: FontWeight.w500,
                   fontSize: 14,
-                  color: Colors.redAccent,
+                  color: AppColors.error,
                 ),
               ),
             ),
