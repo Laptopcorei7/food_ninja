@@ -5,15 +5,34 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // "dev host" writes the PC's IP so the phone can reach the server.
       "name": "Launch development",
       "request": "launch",
       "type": "dart",
       "program": "lib/main_development.dart",
+      "preLaunchTask": "dev host",
       "args": [
         "--flavor",
         "development",
         "--target",
-        "lib/main_development.dart"
+        "lib/main_development.dart",
+        "--dart-define-from-file=.dart_tool/dev_host.json"
+      ]
+    },
+    {
+      // Starts at onboarding, signed out, on every launch and hot restart.
+      "name": "Launch development (fresh start)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_development.dart",
+      "preLaunchTask": "dev host",
+      "args": [
+        "--flavor",
+        "development",
+        "--target",
+        "lib/main_development.dart",
+        "--dart-define-from-file=.dart_tool/dev_host.json",
+        "--dart-define=FRESH_START=true"
       ]
     },
     {
