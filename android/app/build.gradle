@@ -106,3 +106,8 @@ kotlin {
 flutter {
     source '../..'
 }
+
+dependencies {
+    // SMS Retriever: reads the sign-up code without SMS permissions (MainActivity.kt).
+    implementation "com.google.android.gms:play-services-auth-api-phone:18.1.0"
+}

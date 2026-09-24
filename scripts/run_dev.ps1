@@ -3,10 +3,14 @@
 #   .\scripts\run_dev.ps1                  (auto-detect IP)
 #   .\scripts\run_dev.ps1 --emulator       (force 10.0.2.2 for Android emulator)
 #   .\scripts\run_dev.ps1 -d <device-id>   (target a specific device)
+#   .\scripts\run_dev.ps1 -fresh           (start at onboarding, signed out, every launch)
+#   .\scripts\run_dev.ps1 -writeOnly       (only write .dart_tool/dev_host.json for VS Code F5)
 
 param(
     [string]$d = "",
-    [switch]$emulator
+    [switch]$emulator,
+    [switch]$fresh,
+    [switch]$writeOnly
 )
 
 function Test-Port {
@@ -86,7 +90,18 @@ if ($emulator -or $d -match "emulator") {
     Write-Host ""
 }
 
-$define = "--dart-define=DEV_HOST=$hostIp"
+# -writeOnly: VS Code's launch configs run this first (preLaunchTask) and read
+# the file with --dart-define-from-file, so F5 gets DEV_HOST and hot reload on save.
+if ($writeOnly) {
+    $json = "{`"DEV_HOST`": `"$hostIp`"}"
+    # ASCII, not PowerShell's default UTF-8 with BOM, which the JSON reader rejects.
+    Set-Content -Path "$PSScriptRoot\..\.dart_tool\dev_host.json" -Value $json -Encoding ascii
+    Write-Host "Wrote .dart_tool/dev_host.json (DEV_HOST = $hostIp)" -ForegroundColor Green
+    exit 0
+}
+
+$define = @("--dart-define=DEV_HOST=$hostIp")
+if ($fresh) { $define += "--dart-define=FRESH_START=true" }
 
 if ($d) {
     Write-Host "flutter run $define --flavor development -t lib/main_development.dart -d $d" -ForegroundColor Cyan
