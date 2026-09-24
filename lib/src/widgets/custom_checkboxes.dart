@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 
 class CustomCheckbox extends StatelessWidget {
   const CustomCheckbox({
@@ -11,34 +12,22 @@ class CustomCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: value
-              ? const LinearGradient(
-                  colors: [
-                    Color(0xFF53E88B),
-                    Color(0xFF15BE77),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
+    return Semantics(
+      checked: value,
+      child: GestureDetector(
+        onTap: () => onChanged(!value),
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: value ? AppColors.brandGradient : null,
+            color: value ? null : context.colors.textSecondary,
+          ),
+          child: value
+              ? const Icon(Icons.check, size: 14, color: Colors.white)
               : null,
-          color: value ? null : const Color(0xFFE0E0E0), // light grey
         ),
-        child: value
-            ? const Center(
-                child: Icon(
-                  Icons.check,
-                  size: 14,
-                  color: Colors.white,
-                ),
-              )
-            : null,
       ),
     );
   }

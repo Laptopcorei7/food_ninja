@@ -1,11 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:food_ninja/src/screens/sign_up_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/user_service.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
+import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 class SetLocationScreen extends StatefulWidget {
   const SetLocationScreen({super.key});
@@ -17,11 +22,158 @@ class SetLocationScreen extends StatefulWidget {
 class _SetLocationScreenState extends State<SetLocationScreen> {
   final TextEditingController _locationController = TextEditingController();
   final _userService = UserService();
+  final _geocoding = Geocoding();
+
+  bool _locating = false;
+  String? _status;
+  double _lat = 0;
+  double _lng = 0;
+
+  /// The last address filled in automatically; if the field still holds it,
+  /// a better fix may replace it.
+  String _autoFilled = '';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_detect());
+  }
 
   @override
   void dispose() {
     _locationController.dispose();
     super.dispose();
+  }
+
+  /// Fills the address from the phone's GPS. The user can still edit it
+  /// (e.g. add a house number) or type it if location access is refused.
+  Future<void> _detect() async {
+    setState(() {
+      _locating = true;
+      _status = 'Finding your location...';
+    });
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _setStatus('Location is off. Turn it on, or type your address.');
+        await _offerSettings(
+          'Location Is Off',
+          'Turn on location to find your address automatically.',
+          Geolocator.openLocationSettings,
+        );
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied) {
+        _setStatus('Allow location access, or type your address.');
+        return;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _setStatus('Location access is blocked. Type your address.');
+        await _offerSettings(
+          'Location Access Needed',
+          'Allow location in Settings to find your address automatically.',
+          Geolocator.openAppSettings,
+        );
+        return;
+      }
+
+      // A GPS that was just switched on often needs longer than a normal wait
+      // indoors, which made the first try fail. Show the phone's last known
+      // position at once, then refine it with a fresh fix.
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) await _useFix(last);
+      try {
+        final fresh = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 30),
+          ),
+        );
+        await _useFix(fresh);
+      } on TimeoutException {
+        if (last == null) rethrow;
+        debugPrint('[SetLocation] no fresh fix, keeping last known position');
+      }
+    } on Exception catch (e) {
+      debugPrint('[SetLocation] detect failed: $e');
+      _setStatus("Couldn't find your location. Try again or type it.");
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  /// Stores the position and fills the address, unless the user has edited
+  /// the field since the last automatic fill.
+  Future<void> _useFix(Position position) async {
+    _lat = position.latitude;
+    _lng = position.longitude;
+    final address = await _addressFor(_lat, _lng);
+    if (!mounted) return;
+    if (_locationController.text == _autoFilled) {
+      _locationController.text = address;
+      _autoFilled = address;
+    }
+    _setStatus(
+      address.isEmpty
+          ? 'Found your position. Type your street to finish.'
+          : null,
+    );
+  }
+
+  /// Street address for a position. The phone's geocoder sometimes fails the
+  /// first call (e.g. still connecting), so it gets one retry.
+  Future<String> _addressFor(double lat, double lng) async {
+    for (var attempt = 1;; attempt++) {
+      try {
+        final places = await _geocoding.placemarkFromCoordinates(lat, lng);
+        return places.isEmpty ? '' : _format(places.first);
+      } on PlatformException catch (e) {
+        if (attempt == 2) rethrow;
+        debugPrint('[SetLocation] geocoding failed, retrying: $e');
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+  }
+
+  /// "4 Liberation Road, Osu, Accra": street, area and city, skipping blanks
+  /// and repeats.
+  String _format(Placemark place) {
+    final parts = <String>[];
+    for (final part in [place.street, place.subLocality, place.locality]) {
+      if (part != null && part.isNotEmpty && !parts.contains(part)) {
+        parts.add(part);
+      }
+    }
+    return parts.join(', ');
+  }
+
+  void _setStatus(String? status) {
+    if (mounted) setState(() => _status = status);
+  }
+
+  Future<void> _offerSettings(
+    String title,
+    String message,
+    Future<bool> Function() open,
+  ) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AppDialog(
+        title: title,
+        message: message,
+        primaryLabel: 'Open Settings',
+        onPrimary: () {
+          Navigator.of(ctx).pop();
+          unawaited(open());
+        },
+        secondaryLabel: 'Type It Instead',
+        onSecondary: () => Navigator.of(ctx).pop(),
+      ),
+    );
   }
 
   Future<void> _handleNext() async {
@@ -32,7 +184,7 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
         context: context,
         builder: (ctx) => AppDialog(
           title: 'Enter Location',
-          message: 'Please enter your delivery address to continue.',
+          message: 'Tap Set Location or type your delivery address.',
           primaryLabel: 'Got it',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
@@ -43,13 +195,11 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
     unawaited(showLoadingOverlay(context));
     final nav = Navigator.of(context);
     try {
-      // lat/lng default to 0.0 — maps integration will update these later
-      await _userService.updateLocation(address, 0, 0);
+      // lat/lng stay 0 when the address was typed without GPS.
+      await _userService.updateLocation(address, _lat, _lng);
       if (!mounted) return;
       nav.pop(); // dismiss overlay
-      await nav.push<void>(
-        MaterialPageRoute<void>(builder: (_) => const SignupSuccessScreen()),
-      );
+      await nav.pushNamed(AppRoutes.signUpSuccess);
     } on Object catch (e) {
       if (!mounted) return;
       nav.pop(); // dismiss overlay
@@ -67,124 +217,157 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 249, 249, 253),
       body: Stack(
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              'assets/images/pattern_2.png',
-              fit: BoxFit.cover,
-              height: 250,
-              width: 200,
-            ),
-          ),
-
+          const SetupPattern(),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 45,
-                    height: 45,
-                    child: CustomBackButton(
-                      onTap: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  const Text(
-                    'Set Your Location',
-                    style: TextStyle(
-                      fontFamily: 'BentonSansBold',
-                      fontSize: 25,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'This data will be used for your delivery address',
-                    style: TextStyle(
-                      fontFamily: 'BentonSansBook',
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
+            // Scrolls only when the content does not fit (short phone,
+            // keyboard open); otherwise Next stays at the bottom.
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF53E88B).withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Color(0xFF53E88B),
-                            size: 22,
+                        SizedBox(
+                          width: 45,
+                          height: 45,
+                          child: CustomBackButton(
+                            onTap: () => Navigator.maybePop(context),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            controller: _locationController,
-                            style: const TextStyle(
-                              fontFamily: 'BentonSansRegular',
-                              fontSize: 14,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Your Location',
-                              hintStyle: TextStyle(
-                                fontFamily: 'BentonSansRegular',
-                                color: Colors.grey,
+                        const SizedBox(height: 32),
+                        const Text(
+                          'Set Your Location',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 25,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'This data will be used for your delivery address',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w300,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: colors.border),
+                            boxShadow: [
+                              BoxShadow(color: colors.shadow, blurRadius: 50),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.orange
+                                          .withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: AppColors.orange,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Your Location',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _locationController,
+                                minLines: 1,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  hintText: 'Street, area, city',
+                                  fillColor: colors.inactive,
+                                ),
+                              ),
+                              if (_status != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  _status!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colors.textPrimary
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: TextButton.icon(
+                                  onPressed: _locating ? null : _detect,
+                                  icon: _locating
+                                      ? const SizedBox.square(
+                                          dimension: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.green,
+                                          ),
+                                        )
+                                      : const Icon(Icons.my_location, size: 18),
+                                  label: const Text(
+                                    'Set Location',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: colors.textPrimary,
+                                    backgroundColor: colors.inactive,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Center(
+                          child: MajorButton(
+                            horizontal: 75,
+                            vertical: 23,
+                            textonButton: 'Next',
+                            onPress: _handleNext,
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  const Spacer(),
-
-                  Center(
-                    child: MajorButton(
-                      horizontal: 75,
-                      vertical: 23,
-                      textonButton: 'Next',
-                      onPress: _handleNext,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

@@ -1,19 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class UserService {
   static const _devHost =
       String.fromEnvironment('DEV_HOST', defaultValue: '10.0.2.2');
   static const _baseUrl = 'http://$_devHost:5000/api/v1';
-  static const _tokenKey = 'auth_token';
 
-  final _storage = const FlutterSecureStorage();
-
-  Future<String?> _token() => _storage.read(key: _tokenKey);
+  Future<String?> _token() => AuthService().getToken();
 
   Map<String, String> _authHeaders(String token) => {
         'Content-Type': 'application/json',
@@ -22,7 +20,7 @@ class UserService {
 
   void _guard401(http.Response response) {
     if (response.statusCode == 401) {
-      throw Exception('Session expired. Please log in again.');
+      throw SessionExpiredException();
     }
   }
 
@@ -44,7 +42,7 @@ class UserService {
     }
 
     _guard401(response);
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     if (response.statusCode == 200 && body['success'] == true) {
       return (body['data'] as Map<String, dynamic>)['user']
           as Map<String, dynamic>;
@@ -84,10 +82,20 @@ class UserService {
 
     _guard401(response);
     if (response.statusCode == 200) return;
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     throw Exception(
       (body['message'] as String?) ?? 'Failed to update profile.',
     );
+  }
+
+  /// The server accepts jpeg, png and webp.
+  static MediaType _imageType(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    return switch (ext) {
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      _ => MediaType('image', 'jpeg'),
+    };
   }
 
   Future<void> uploadPhoto(String imagePath) async {
@@ -100,7 +108,15 @@ class UserService {
       Uri.parse('$_baseUrl/users/me/photo'),
     )
       ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('photo', imagePath));
+      // Without a content type the file goes up as application/octet-stream,
+      // which the server's image filter rejects.
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'photo',
+          imagePath,
+          contentType: _imageType(imagePath),
+        ),
+      );
 
     final http.Response response;
     try {
@@ -112,10 +128,10 @@ class UserService {
     }
 
     if (response.statusCode == 401) {
-      throw Exception('Session expired. Please log in again.');
+      throw SessionExpiredException();
     }
     if (response.statusCode == 200) return;
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     throw Exception(
       (body['message'] as String?) ?? 'Failed to upload photo.',
     );
@@ -147,17 +163,19 @@ class UserService {
 
     _guard401(response);
     if (response.statusCode == 200) return;
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     throw Exception(
       (body['message'] as String?) ?? 'Failed to update location.',
     );
   }
 
+  /// Leave [brand] and [last4] null for a card whose details are not added
+  /// yet; the server then stores them as null.
   Future<void> addPaymentMethod(
-    String type,
-    String brand,
-    String last4,
-  ) async {
+    String type, {
+    String? brand,
+    String? last4,
+  }) async {
     if (kDebugMode) {
       debugPrint('[UserService] POST $_baseUrl/users/me/payment-methods');
     }
@@ -170,7 +188,11 @@ class UserService {
           .post(
             Uri.parse('$_baseUrl/users/me/payment-methods'),
             headers: _authHeaders(token),
-            body: jsonEncode({'type': type, 'brand': brand, 'last4': last4}),
+            body: jsonEncode({
+              'type': type,
+              if (brand != null) 'brand': brand,
+              if (last4 != null) 'last4': last4,
+            }),
           )
           .timeout(const Duration(seconds: 15));
     } catch (e) {
@@ -179,7 +201,7 @@ class UserService {
 
     _guard401(response);
     if (response.statusCode == 201) return;
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = decodeBody(response);
     throw Exception(
       (body['message'] as String?) ?? 'Failed to add payment method.',
     );

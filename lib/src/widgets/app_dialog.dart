@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/theme/app_colors.dart';
 
 /// Shows a full-screen semi-transparent overlay with a centred green spinner.
 /// The caller dismisses it with Navigator.of(context).pop() when ready.
@@ -10,7 +11,7 @@ Future<void> showLoadingOverlay(BuildContext context) async {
     builder: (_) => const Center(
       child: CircularProgressIndicator(
         strokeWidth: 3,
-        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF53E88B)),
+        valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
       ),
     ),
   );
@@ -41,7 +42,7 @@ class AppDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.colors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
@@ -56,7 +57,7 @@ class AppDialog extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontFamily: 'BentonSansBold',
+                fontWeight: FontWeight.w700,
                 fontSize: 18,
               ),
             ),
@@ -65,7 +66,7 @@ class AppDialog extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontFamily: 'BentonSansBook',
+                fontWeight: FontWeight.w300,
                 fontSize: 13,
                 color: Color(0xFF9D9D9D),
                 height: 1.5,
@@ -84,7 +85,7 @@ class AppDialog extends StatelessWidget {
                 child: Text(
                   secondaryLabel!,
                   style: const TextStyle(
-                    fontFamily: 'BentonSansMedium',
+                    fontWeight: FontWeight.w500,
                     fontSize: 13,
                     color: Color(0xFF9D9D9D),
                   ),
@@ -120,16 +121,16 @@ class _PrimaryButton extends StatelessWidget {
           gradient: isDestructive
               ? null
               : const LinearGradient(
-                  colors: [Color(0xFF53E88B), Color(0xFF15BE77)],
+                  colors: [AppColors.green, AppColors.greenDark],
                 ),
-          color: isDestructive ? const Color(0xFFE53935) : null,
+          color: isDestructive ? AppColors.error : null,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontFamily: 'BentonSansBold',
+            fontWeight: FontWeight.w700,
             fontSize: 15,
             color: Colors.white,
           ),

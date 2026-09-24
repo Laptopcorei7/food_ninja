@@ -116,3 +116,5 @@ app.*.map.json
 !.idea/runConfigurations/
 
 .fake
+# Design reference PNGs, kept local (17 MB)
+UI design/
