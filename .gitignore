@@ -118,3 +118,4 @@ app.*.map.json
 .fake
 # Design reference PNGs, kept local (17 MB)
 UI design/
+new_designs/

@@ -71,17 +71,17 @@ android {
         production {
             dimension "default"
             applicationIdSuffix ""
-            manifestPlaceholders = [appName: "Food Ninja"]
+            manifestPlaceholders = [appName: "YumQuick"]
         }
         staging {
             dimension "default"
             applicationIdSuffix ".stg"
-            manifestPlaceholders = [appName: "[STG] Food Ninja"]
+            manifestPlaceholders = [appName: "[STG] YumQuick"]
         }
         development {
             dimension "default"
             applicationIdSuffix ".dev"
-            manifestPlaceholders = [appName: "[DEV] Food Ninja"]
+            manifestPlaceholders = [appName: "[DEV] YumQuick"]
         }
     }
 

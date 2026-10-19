@@ -7,62 +7,91 @@ abstract final class AppTheme {
 
   static ThemeData _build(Brightness brightness, AppColors c) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.greenDark,
+      seedColor: AppColors.orange,
       brightness: brightness,
     ).copyWith(
-      primary: AppColors.greenDark,
-      secondary: AppColors.orange,
+      primary: AppColors.orange,
+      onPrimary: Colors.white,
+      secondary: AppColors.yellow,
       error: AppColors.error,
-      surface: c.surface,
+      surface: c.background,
       onSurface: c.textPrimary,
+    );
+
+    final fieldShape = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(13),
+      borderSide: BorderSide.none,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: c.background,
-      fontFamily: 'BentonSans',
-      // Sizes from the designs (375-wide frames).
-      textTheme: const TextTheme(
-        // "Find Your Favorite Food" page titles
-        headlineLarge: TextStyle(fontSize: 31, fontWeight: FontWeight.w700),
-        // auth screen titles
-        headlineMedium: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-        // card titles, e.g. a dish name
-        titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w300),
-        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w300),
+      fontFamily: 'LeagueSpartan',
+      // Sizes from the kit's 393-wide frames.
+      textTheme: TextTheme(
+        // the title in the yellow header
+        headlineMedium: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+        ),
+        // "Welcome", "Shipping Address"
+        titleLarge: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+        // field labels, list item titles
+        titleMedium: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        bodyLarge: const TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: c.textBody,
+        ),
+        bodySmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w300,
+          color: c.textBody,
+        ),
         // button labels
-        labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        labelLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
       ).apply(bodyColor: c.textPrimary, displayColor: c.textPrimary),
       appBarTheme: AppBarTheme(
-        backgroundColor: c.background,
-        foregroundColor: c.textPrimary,
+        backgroundColor: c.header,
+        foregroundColor: c.onHeader,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
-      // Text fields in 1.4-1.10: filled card, 15 radius, grey hint.
+      // Cream fields with no outline; orange edge while typing.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: c.surface,
+        fillColor: c.field,
         hintStyle: TextStyle(
-          fontSize: 14,
+          fontSize: 18,
           fontWeight: FontWeight.w400,
-          color: c.textSecondary,
+          color: c.hint,
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 20,
+          horizontal: 16,
+          vertical: 13,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: c.border),
+        border: fieldShape,
+        enabledBorder: fieldShape,
+        focusedBorder: fieldShape.copyWith(
+          borderSide: const BorderSide(color: AppColors.orange, width: 1.5),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: AppColors.green),
+        errorBorder: fieldShape.copyWith(
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: fieldShape.copyWith(
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.orange : c.soft,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      dividerTheme: DividerThemeData(color: c.divider, thickness: 1, space: 1),
       extensions: [c],
     );
   }
