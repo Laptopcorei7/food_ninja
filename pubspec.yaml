@@ -31,14 +31,21 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icons/
   fonts:
-    - family: BentonSans
+    # Static weights cut from Google Fonts' variable file (OFL, see
+    # assets/fonts/LeagueSpartan-OFL.txt).
+    - family: LeagueSpartan
       fonts:
-        - asset: assets/fonts/BentonSans Book.otf
+        - asset: assets/fonts/LeagueSpartan-Light.ttf
           weight: 300
-        - asset: assets/fonts/BentonSans Regular.otf
+        - asset: assets/fonts/LeagueSpartan-Regular.ttf
           weight: 400
-        - asset: assets/fonts/BentonSans Medium.otf
+        - asset: assets/fonts/LeagueSpartan-Medium.ttf
           weight: 500
-        - asset: assets/fonts/BentonSans Bold.otf
+        - asset: assets/fonts/LeagueSpartan-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/LeagueSpartan-Bold.ttf
           weight: 700
+        - asset: assets/fonts/LeagueSpartan-ExtraBold.ttf
+          weight: 800

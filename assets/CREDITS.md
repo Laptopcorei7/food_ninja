@@ -15,3 +15,7 @@ in its own colours in light mode and white in dark mode.
 | paypal.png | https://cdn.jsdelivr.net/npm/payment-icons@1.2.1/min/flat/paypal.svg (card background removed, cropped to the wordmark, rendered 660x170) | payment-icons (activemerchant) | MPL-2.0 (package); PayPal trademark |
 | visa.png | https://cdn.jsdelivr.net/npm/simple-icons@13/icons/visa.svg | Simple Icons | CC0 1.0 (icon data); Visa trademark |
 | mastercard.png | https://cdn.jsdelivr.net/npm/simple-icons@13/icons/mastercard.svg | Simple Icons | CC0 1.0 (icon data); Mastercard trademark |
+| fonts/LeagueSpartan-*.ttf | https://github.com/google/fonts/tree/main/ofl/leaguespartan (static weights 300-800 cut from the variable file with fontTools) | The League of Moveable Type / Tyler Finck | SIL OFL 1.1 (fonts/LeagueSpartan-OFL.txt) |
+
+`assets/icons/` are cut from the YumQuick UI kit's component sheets
+(`new_designs/components/`), the kit the app is built on, as white masks.

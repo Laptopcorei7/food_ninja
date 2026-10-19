@@ -36,9 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _tab,
         children: const [
           _NearbyTab(),
-          _ComingSoon(title: 'Profile', phase: 8, showLogout: true),
-          _ComingSoon(title: 'Cart', phase: 5),
-          _ComingSoon(title: 'Chat', phase: 7),
+          // Log Out moves to the profile menu in redesign step 3.
+          _ComingSoon(title: 'Menu', when: 'redesign step 3', showLogout: true),
+          _ComingSoon(title: 'Favorites', when: 'phase 8'),
+          _ComingSoon(title: 'My orders', when: 'phase 6'),
+          _ComingSoon(title: 'Help', when: 'phase 7'),
         ],
       ),
       bottomNavigationBar: AppBottomNav(
@@ -440,7 +442,7 @@ class _NearbyTabState extends State<_NearbyTab> {
           border: Border.all(color: AppColors.orange.withValues(alpha: 0.3)),
         ),
         child: Text(
-          "Food Ninja doesn't deliver here yet: no restaurants within "
+          "YumQuick doesn't deliver here yet: no restaurants within "
           '${formatKm(RadiusMap.maxKm)} of you.',
           style: TextStyle(
             fontSize: 14,
@@ -627,7 +629,7 @@ class NotificationsPlaceholder extends StatelessWidget {
                 onTap: () => Navigator.of(context).pop(),
               ),
             ),
-            const _ComingSoon(title: 'Notifications', phase: 8),
+            const _ComingSoon(title: 'Notifications', when: 'phase 8'),
           ],
         ),
       ),
@@ -679,12 +681,14 @@ class _LoadError extends StatelessWidget {
 class _ComingSoon extends StatelessWidget {
   const _ComingSoon({
     required this.title,
-    required this.phase,
+    required this.when,
     this.showLogout = false,
   });
 
   final String title;
-  final int phase;
+
+  /// "phase 6", "redesign step 3".
+  final String when;
   final bool showLogout;
 
   Future<void> _logout(BuildContext context) async {
@@ -721,7 +725,7 @@ class _ComingSoon extends StatelessWidget {
             Text(title, style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
             Text(
-              'Coming in phase $phase',
+              'Coming in $when',
               style: TextStyle(color: context.colors.textSecondary),
             ),
             if (showLogout) ...[

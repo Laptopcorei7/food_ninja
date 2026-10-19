@@ -131,7 +131,7 @@ class SecondOnboardingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return _OnboardingPage(
       image: 'assets/images/art_2.png',
-      title: 'Food Ninja is Where Your\nComfort Food Lives',
+      title: 'YumQuick is Where Your\nComfort Food Lives',
       body: 'Enjoy a fast and smooth food delivery at\nyour doorstep',
       buttonLabel: 'Get Started',
       onNext: () => _onNext(context),

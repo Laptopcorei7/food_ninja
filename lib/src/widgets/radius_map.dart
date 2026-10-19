@@ -406,7 +406,7 @@ class _RingsPainter extends CustomPainter {
         text: TextSpan(
           text: label,
           style: TextStyle(
-            fontFamily: 'BentonSans',
+            fontFamily: 'LeagueSpartan',
             fontSize: 10,
             fontWeight: FontWeight.w700,
             color: labelColor,

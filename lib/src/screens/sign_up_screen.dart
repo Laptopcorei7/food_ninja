@@ -63,7 +63,7 @@ class _SignUpState extends State<SignUpScreen> {
           imagePath: 'assets/images/success.png',
           title: 'Account Created!',
           message:
-              "Welcome to Food Ninja! Let's finish setting up your profile.",
+              "Welcome to YumQuick! Let's finish setting up your profile.",
           primaryLabel: 'Continue',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
