@@ -103,13 +103,17 @@ class SheetScaffold extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Material(
-              color: colors.background,
+            // ClipRRect, not Material's own clipBehavior: on the phone the
+            // Material clip let sideways-scrolling rows paint over the
+            // rounded top corners into the header.
+            child: ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(30),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: child,
+              child: Material(
+                color: colors.background,
+                child: child,
+              ),
             ),
           ),
         ],

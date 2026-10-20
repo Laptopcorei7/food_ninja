@@ -61,8 +61,7 @@ class _SignUpState extends State<SignUpScreen> {
         builder: (ctx) => AppDialog(
           success: true,
           title: 'Account Created!',
-          message:
-              "Welcome to YumQuick! Let's finish setting up your profile.",
+          message: "Welcome to YumQuick! Let's finish setting up your profile.",
           primaryLabel: 'Continue',
           onPrimary: () => Navigator.of(ctx).pop(),
         ),

@@ -75,8 +75,7 @@ void main() {
       );
     });
 
-    testWidgets("a wrong password shows the server's message",
-        (tester) async {
+    testWidgets("a wrong password shows the server's message", (tester) async {
       final server = FakeServer(
         (_) async => FakeServer.reply(401, {
           'success': false,
@@ -131,8 +130,7 @@ void main() {
       expect(password().obscureText, isFalse);
     });
 
-    testWidgets('Forgot password? opens with the typed email',
-        (tester) async {
+    testWidgets('Forgot password? opens with the typed email', (tester) async {
       await tester.pumpApp(const SignInScreen());
       await tester.enterText(find.byType(TextField).at(0), 'a@b.co');
       await tester.tap(find.text('Forgot password?'));

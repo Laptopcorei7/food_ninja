@@ -22,3 +22,6 @@ in its own colours in light mode and white in dark mode.
 
 `assets/icons/` are cut from the YumQuick UI kit's component sheets
 (`new_designs/components/`), the kit the app is built on, as white masks.
+The kit has no icon for soups, grills or burgers, so `cat_soups.png`,
+`cat_grills.png` and `cat_burgers.png` were drawn for this project in the
+kit's line style (2 px strokes at 144 px).

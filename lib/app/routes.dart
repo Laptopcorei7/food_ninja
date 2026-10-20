@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/dish_list_screen.dart';
 import 'package:food_ninja/src/screens/forgot_password_screen.dart';
 import 'package:food_ninja/src/screens/home_screen.dart';
 import 'package:food_ninja/src/screens/new_password_screen.dart';
 import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/screens/payment_method_screen.dart';
+import 'package:food_ninja/src/screens/restaurant_screen.dart';
 import 'package:food_ninja/src/screens/search_screen.dart';
 import 'package:food_ninja/src/screens/set_location_screen.dart';
 import 'package:food_ninja/src/screens/sign_in_screen.dart';
@@ -12,6 +14,7 @@ import 'package:food_ninja/src/screens/sign_up_screen.dart';
 import 'package:food_ninja/src/screens/upload_photo_screen.dart';
 import 'package:food_ninja/src/screens/upload_preview_screen.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
+import 'package:food_ninja/src/services/location_service.dart';
 
 /// Route names. Navigate with `Navigator.pushNamed(context, AppRoutes.home)`.
 abstract final class AppRoutes {
@@ -32,12 +35,16 @@ abstract final class AppRoutes {
   static const newPassword = '/new-password';
   static const search = '/search';
   static const notifications = '/notifications';
+  static const restaurant = '/restaurant';
+  static const dishes = '/dishes';
+  static const comingSoon = '/coming-soon';
 
   /// The screen for a route name. `verify` takes the phone number,
   /// `uploadPreview` the image path and `uploadPhoto` an optional recovered
   /// photo path as the argument. `forgotPassword` takes an optional email,
   /// `resetCode` a (method, contact) record, `newPassword` the reset token
-  /// and `search` a [SearchArgs].
+  /// `search` a [Here], `restaurant` an (id, [Here]?) record, `dishes` a
+  /// [DishListArgs] and `comingSoon` a (title, when) record.
   static Widget? page(String? name, Object? arg) => switch (name) {
         onboarding => const OnboardingScreen(),
         welcome => const WelcomeScreen(),
@@ -57,8 +64,17 @@ abstract final class AppRoutes {
               VerificationScreen(contact: contact, resetMethod: method),
           },
         newPassword => NewPasswordScreen(resetToken: arg! as String),
-        search => SearchScreen(args: arg! as SearchArgs),
-        notifications => const NotificationsPlaceholder(),
+        search => SearchScreen(here: arg! as Here),
+        restaurant => switch (arg! as (String, Here?)) {
+            (final id, final here) => RestaurantScreen(id: id, here: here),
+          },
+        dishes => DishListScreen(args: arg! as DishListArgs),
+        comingSoon => switch (arg! as (String, String)) {
+            (final title, final phase) =>
+              ComingSoonScreen(title: title, when: phase),
+          },
+        notifications =>
+          const ComingSoonScreen(title: 'Notifications', when: 'phase 8'),
         _ => null,
       };
 
