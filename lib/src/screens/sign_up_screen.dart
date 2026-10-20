@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/auth_layout.dart';
-import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -21,7 +21,6 @@ class _SignUpState extends State<SignUpScreen> {
 
   final _authService = AuthService();
 
-  bool _emailMe = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -60,7 +59,7 @@ class _SignUpState extends State<SignUpScreen> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AppDialog(
-          imagePath: 'assets/images/success.png',
+          success: true,
           title: 'Account Created!',
           message:
               "Welcome to YumQuick! Let's finish setting up your profile.",
@@ -91,26 +90,28 @@ class _SignUpState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthLayout(
-      title: 'Sign Up For Free',
+      title: 'New Account',
       children: [
         AuthTextField(
           controller: _nameController,
-          hint: 'Name',
-          icon: 'assets/images/profile.png',
+          label: 'Full name',
+          hint: 'Ama Mensah',
+          autofillHints: const [AutofillHints.name],
         ),
-        const SizedBox(height: 12),
         AuthTextField(
           controller: _emailController,
-          hint: 'Email',
-          icon: 'assets/images/email.png',
+          label: 'Email',
+          hint: 'example@example.com',
           keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
         ),
-        const SizedBox(height: 12),
         AuthTextField(
           controller: _passwordController,
-          hint: 'Password',
-          icon: 'assets/images/lock.png',
+          label: 'Password',
           obscureText: _obscurePassword,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleSignUp(),
           suffix: PasswordToggle(
             obscured: _obscurePassword,
             onPressed: () =>
@@ -118,40 +119,25 @@ class _SignUpState extends State<SignUpScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            CustomCheckbox(
-              value: _emailMe,
-              onChanged: (val) => setState(() => _emailMe = val),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Email Me About Special Pricing',
-              style: TextStyle(
-                fontSize: 12,
-                color: context.colors.textPrimary.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+        Center(
+          child: _isLoading
+              ? const CircularProgressIndicator(color: AppColors.orange)
+              : SizedBox(
+                  width: 210,
+                  child: MajorButton(
+                    horizontal: 16,
+                    vertical: 10,
+                    textonButton: 'Sign Up',
+                    onPress: _handleSignUp,
+                  ),
+                ),
         ),
-        const SizedBox(height: 16),
-        const SocialSignInButtons(),
         const SizedBox(height: 24),
-        if (_isLoading)
-          const CircularProgressIndicator(
-            strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
-          )
-        else
-          MajorButton(
-            horizontal: 40,
-            vertical: 18,
-            textonButton: 'Create Account',
-            onPress: _handleSignUp,
-          ),
-        const SizedBox(height: 8),
+        const SocialSignInButtons(),
+        const SizedBox(height: 16),
         AuthLink(
-          label: 'already have an account?',
+          prefix: 'Already have an account?',
+          label: 'Log In',
           onTap: () =>
               Navigator.pushReplacementNamed(context, AppRoutes.signIn),
         ),
@@ -160,69 +146,60 @@ class _SignUpState extends State<SignUpScreen> {
   }
 }
 
+/// End of sign-up, in the kit's confirmation style (4.3-E): yellow page,
+/// orange ring, short message.
 class SignupSuccessScreen extends StatelessWidget {
   const SignupSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final colors = context.colors;
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              dark
-                  ? 'assets/images/pattern_dark.png'
-                  : 'assets/images/pattern.png',
-              fit: BoxFit.fitWidth,
-              alignment: Alignment.topCenter,
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images/success.png',
-                    height: 162,
-                    width: 172,
+      backgroundColor: colors.header,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                const ImageIcon(
+                  AppIcons.checkCircle,
+                  size: 140,
+                  color: AppColors.orange,
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  "You're all set!",
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: colors.onHeader,
                   ),
-                  const SizedBox(height: 32),
-                  ShaderMask(
-                    shaderCallback: AppColors.brandGradient.createShader,
-                    blendMode: BlendMode.srcIn,
-                    child: const Text(
-                      'Congrats!',
-                      style:
-                          TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Your Profile Is Ready To Use',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 80),
-                  MajorButton(
-                    horizontal: 50,
-                    vertical: 18,
-                    textonButton: 'Try Order',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your profile is ready. Find something good near you.',
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyLarge?.copyWith(color: colors.onHeader),
+                ),
+                const SizedBox(height: 48),
+                SizedBox(
+                  width: 210,
+                  child: MajorButton(
+                    horizontal: 16,
+                    vertical: 10,
+                    textonButton: 'Start Ordering',
                     onPress: () => Navigator.pushNamedAndRemoveUntil(
                       context,
                       AppRoutes.home,
                       (route) => false,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

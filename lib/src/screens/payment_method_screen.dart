@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   const PaymentMethodScreen({super.key});
@@ -25,15 +24,14 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   static const _options = [
     _PaymentOption(
       id: 'bank',
-      label: 'Bank Card',
-      icon: Icons.account_balance_outlined,
+      label: 'Bank card',
+      icon: AppIcons.card,
       type: 'card',
     ),
     _PaymentOption(
       id: 'paypal',
       label: 'PayPal',
-      // Full-colour wordmark; null keeps its own two blues in light mode.
-      logos: [('assets/images/paypal.png', null)],
+      logo: 'assets/images/paypal.png',
       type: 'paypal',
       brand: 'PayPal',
     ),
@@ -79,119 +77,99 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            // Scrolls only when the content does not fit (short phone,
-            // keyboard open); otherwise Next stays at the bottom.
-            child: CustomScrollView(
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 45,
-                          height: 45,
-                          child: CustomBackButton(
-                            onTap: () => Navigator.maybePop(context),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Payment Method',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'This data will be displayed in your account\nprofile for security',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w300,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        ..._options.map(_buildOptionCard),
-                        const Spacer(),
-                        Center(
-                          child: MajorButton(
-                            horizontal: 75,
-                            vertical: 23,
-                            textonButton: 'Next',
-                            onPress: _handleNext,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return SetupLayout(
+      title: 'Payment Method',
+      intro: 'How would you like to pay? You can add more ways later.',
+      onButton: _handleNext,
+      children: [
+        const Divider(),
+        for (final option in _options) ...[
+          _buildOptionRow(option),
+          const Divider(),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _buildOptionCard(_PaymentOption option) {
+  /// One row of the kit's list (4.1.1-L): icon, name, round selector.
+  Widget _buildOptionRow(_PaymentOption option) {
     final isSelected = _selected == option.id;
-    final colors = context.colors;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Semantics(
-      button: true,
-      selected: isSelected,
+      inMutuallyExclusiveGroup: true,
+      checked: isSelected,
       label: option.label,
-      child: GestureDetector(
-        onTap: () => setState(() => _selected = option.id),
-        child: Container(
-          width: double.infinity,
-          height: 73,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isSelected ? AppColors.green : colors.border,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(color: colors.shadow, blurRadius: 50),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 12,
-            children: [
-              if (option.icon case final icon?) ...[
-                Icon(
-                  icon,
-                  size: 28,
-                  color: dark ? Colors.white : AppColors.greenDark,
-                ),
-                Text(
-                  option.label,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+      excludeSemantics: true,
+      onTap: () => setState(() => _selected = option.id),
+      // Inset and rounded so the tap ripple is a soft pill, not a hard
+      // rectangle between the dividers.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: InkWell(
+          onTap: () => setState(() => _selected = option.id),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                if (option.icon case final icon?) ...[
+                  ImageIcon(icon, size: 32, color: AppColors.orange),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      option.label,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
-                ),
+                ],
+                if (option.logo case final logo?)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      // Full-colour wordmark (the user's choice), white in dark
+                      // mode.
+                      child: Image.asset(
+                        logo,
+                        height: 26,
+                        color: dark ? Colors.white : null,
+                      ),
+                    ),
+                  ),
+                _Radio(selected: isSelected),
               ],
-              for (final (path, color) in option.logos)
-                Image.asset(
-                  path,
-                  height: 30,
-                  color: dark ? Colors.white : color,
-                ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The kit's radio: orange ring, filled centre when chosen.
+class _Radio extends StatelessWidget {
+  const _Radio({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.orange, width: 1.5),
+      ),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 150),
+        scale: selected ? 1 : 0,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.orange,
           ),
         ),
       ),
@@ -204,20 +182,19 @@ class _PaymentOption {
     required this.id,
     required this.label,
     required this.type,
-    this.logos = const [],
     this.icon,
+    this.logo,
     this.brand,
   });
 
   final String id;
   final String label;
 
-  /// Logo asset and its tint in light mode (null = the logo's own colours);
-  /// dark mode shows logos white, as in 2.7.
-  final List<(String, Color?)> logos;
+  /// Kit icon shown with [label].
+  final AssetImage? icon;
 
-  /// Shown with [label] when the option has no brand logo.
-  final IconData? icon;
+  /// Brand wordmark shown instead of icon and label.
+  final String? logo;
   final String type;
   final String? brand;
 }

@@ -9,7 +9,10 @@ enum ButtonTone {
   /// Peach with orange text: Skip, Cancel, Add New Address.
   soft,
 
-  /// Cream with orange text: Sign Up on the orange welcome screen.
+  /// Yellow: Log In on the orange welcome screen (0-B).
+  yellow,
+
+  /// Cream: Sign Up on the orange welcome screen (0-B).
   cream,
 }
 
@@ -34,7 +37,9 @@ class MajorButton extends StatelessWidget {
     final (background, foreground) = switch (tone) {
       ButtonTone.primary => (AppColors.orange, Colors.white),
       ButtonTone.soft => (colors.soft, colors.accentText),
-      ButtonTone.cream => (AppColors.cream, AppColors.orange),
+      // The kit's orange text on these is 2.4:1 and 3:1; brown reads.
+      ButtonTone.yellow => (AppColors.yellow, AppColors.brown),
+      ButtonTone.cream => (AppColors.cream, AppColors.brown),
     };
     final enabled = onPress != null;
     return Material(

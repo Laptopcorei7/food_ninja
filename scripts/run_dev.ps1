@@ -27,6 +27,40 @@ function Test-Port {
     }
 }
 
+# The phone's Wi-Fi IPv4 address read over adb, or $null when no phone answers.
+function Get-PhoneIp {
+    $adb = $null
+    if ($env:ANDROID_HOME) {
+        $sdkAdb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
+        if (Test-Path $sdkAdb) { $adb = $sdkAdb }
+    }
+    if (-not $adb) {
+        $cmd = Get-Command adb -ErrorAction SilentlyContinue
+        if (-not $cmd) { return $null }
+        $adb = $cmd.Source
+    }
+    $target = @()
+    if ($d) { $target = @("-s", $d) }
+    $out = & $adb @target shell ip -4 addr show wlan0 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $m = [regex]::Match(($out -join " "), 'inet (\d+\.\d+\.\d+\.\d+)')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return $null
+}
+
+# True when $a and $b share the first $prefix bits (same subnet).
+function Test-SameNetwork {
+    param([string]$a, [string]$b, [int]$prefix)
+    $ba = [System.Net.IPAddress]::Parse($a).GetAddressBytes()
+    $bb = [System.Net.IPAddress]::Parse($b).GetAddressBytes()
+    for ($i = 0; $i -lt 4; $i++) {
+        $bits = [Math]::Max(0, [Math]::Min(8, $prefix - 8 * $i))
+        $mask = (0xFF -shl (8 - $bits)) -band 0xFF
+        if (($ba[$i] -band $mask) -ne ($bb[$i] -band $mask)) { return $false }
+    }
+    return $true
+}
+
 if ($emulator -or $d -match "emulator") {
     $hostIp = "10.0.2.2"
     Write-Host "Mode: emulator -- using $hostIp" -ForegroundColor Yellow
@@ -42,10 +76,9 @@ if ($emulator -or $d -match "emulator") {
     }
     Write-Host "Backend detected on localhost:5000" -ForegroundColor Green
 
-    # Step 2 - collect all non-loopback, non-APIPA IPv4 addresses
-    $candidates = Get-NetIPAddress -AddressFamily IPv4 -Type Unicast |
-        Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -ne "127.0.0.1" } |
-        Sort-Object InterfaceMetric
+    # Step 2 - the PC's usable IPv4 addresses (no loopback, no 169.254 link-local)
+    $candidates = @(Get-NetIPAddress -AddressFamily IPv4 -Type Unicast |
+        Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -notlike "127.*" })
 
     if (-not $candidates) {
         Write-Host "ERROR: No network interfaces found. Connect to WiFi and try again." -ForegroundColor Red
@@ -53,27 +86,36 @@ if ($emulator -or $d -match "emulator") {
     }
 
     Write-Host ""
-    Write-Host "Network interfaces found:" -ForegroundColor Cyan
+    Write-Host "PC addresses:" -ForegroundColor Cyan
     foreach ($c in $candidates) {
-        Write-Host "  $($c.IPAddress)  (metric $($c.InterfaceMetric), origin: $($c.PrefixOrigin))" -ForegroundColor Gray
+        Write-Host "  $($c.IPAddress)  ($($c.InterfaceAlias))" -ForegroundColor Gray
     }
     Write-Host ""
 
-    # Step 3 - pick the best candidate
-    # Prefer addresses where the PC itself can reach port 5000 via that IP
-    # (confirms the interface routes back to localhost)
+    # Step 3 - ask the phone (USB or wireless debugging) for its Wi-Fi address
+    # and use the PC address on the same network, e.g. 192.168.137.1 when the
+    # phone is on the PC's hotspot.
     $hostIp = $null
-    foreach ($c in $candidates) {
-        if (Test-Port -ip $c.IPAddress -port 5000) {
-            $hostIp = $c.IPAddress
-            break
+    $phoneIp = Get-PhoneIp
+    if ($phoneIp) {
+        Write-Host "Phone address: $phoneIp" -ForegroundColor Cyan
+        $match = $candidates |
+            Where-Object { Test-SameNetwork $_.IPAddress $phoneIp $_.PrefixLength } |
+            Select-Object -First 1
+        if ($match) {
+            $hostIp = $match.IPAddress
+        } else {
+            Write-Host "Warning: the phone ($phoneIp) is not on any of the PC's networks." -ForegroundColor Yellow
+            Write-Host "Connect both to the same Wi-Fi (or the phone to the PC's hotspot)." -ForegroundColor Yellow
         }
+    } else {
+        Write-Host "No phone found over adb, so its network is unknown." -ForegroundColor Yellow
     }
 
-    # Fallback: just take the lowest-metric address (most likely the WiFi adapter)
+    # Fallback: the Wi-Fi adapter, else the first address.
     if (-not $hostIp) {
-        $hostIp = $candidates[0].IPAddress
-        Write-Host "Warning: Could not self-test port 5000 on any interface." -ForegroundColor Yellow
+        $wifi = $candidates | Where-Object { $_.InterfaceAlias -like "Wi-Fi*" } | Select-Object -First 1
+        $hostIp = if ($wifi) { $wifi.IPAddress } else { $candidates[0].IPAddress }
         Write-Host "Using $hostIp as best guess." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "If the app still can't reach the server, check:" -ForegroundColor Yellow

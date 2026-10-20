@@ -5,9 +5,7 @@ import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
 import 'package:food_ninja/src/widgets/auth_layout.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 
 /// Forgot password, last step (1.14). [resetToken] comes from the verified
 /// code and lives only in this route's argument.
@@ -37,7 +35,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
   Future<void> _showMessage(
     String title,
     String message, {
-    String? imagePath,
+    bool success = false,
     String label = 'Got it',
   }) =>
       showDialog<void>(
@@ -46,7 +44,7 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
         builder: (ctx) => AppDialog(
           title: title,
           message: message,
-          imagePath: imagePath,
+          success: success,
           primaryLabel: label,
           onPrimary: () => Navigator.of(ctx).pop(),
         ),
@@ -80,8 +78,8 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
       await _showMessage(
         'Password Reset',
         'Your password has been changed. Sign in with your new password.',
-        imagePath: 'assets/images/success.png',
-        label: 'Sign In',
+        success: true,
+        label: 'Log In',
       );
       if (!mounted) return;
       await nav.pushNamedAndRemoveUntil(AppRoutes.signIn, (_) => false);
@@ -99,90 +97,36 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 45,
-                          height: 45,
-                          child: CustomBackButton(
-                            onTap: () => Navigator.maybePop(context),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Reset your password\nhere',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Choose a new password for your account',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w300,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: 'New Password',
-                            suffixIcon: PasswordToggle(
-                              obscured: _obscurePassword,
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: _confirmController,
-                          obscureText: _obscureConfirm,
-                          decoration: InputDecoration(
-                            hintText: 'Confirm Password',
-                            suffixIcon: PasswordToggle(
-                              obscured: _obscureConfirm,
-                              onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        const SizedBox(height: 24),
-                        Center(
-                          child: MajorButton(
-                            horizontal: 75,
-                            vertical: 23,
-                            textonButton: 'Next',
-                            onPress: _handleNext,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    return SetupLayout(
+      title: 'Set Password',
+      intro: 'Choose a new password for your account.',
+      buttonLabel: 'Create New Password',
+      onButton: _handleNext,
+      children: [
+        AuthTextField(
+          controller: _passwordController,
+          label: 'Password',
+          obscureText: _obscurePassword,
+          autofillHints: const [AutofillHints.newPassword],
+          suffix: PasswordToggle(
+            obscured: _obscurePassword,
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
           ),
-        ],
-      ),
+        ),
+        AuthTextField(
+          controller: _confirmController,
+          label: 'Confirm password',
+          obscureText: _obscureConfirm,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleNext(),
+          suffix: PasswordToggle(
+            obscured: _obscureConfirm,
+            onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+          ),
+        ),
+      ],
     );
   }
 }

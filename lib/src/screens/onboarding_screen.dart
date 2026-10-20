@@ -1,196 +1,314 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
+import 'package:food_ninja/src/widgets/yumquick_logo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LoadingScreen extends StatefulWidget {
-  const LoadingScreen({super.key});
-
-  @override
-  State<LoadingScreen> createState() => _LoadingScreenState();
-}
-
-class _LoadingScreenState extends State<LoadingScreen> {
-  bool showLoader = false;
-
-  Route<void> _createFadeRoute(Widget page) {
-    return PageRouteBuilder(
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Show logo first
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      setState(() {
-        showLoader = true;
-      });
-    });
-
-    // Then navigate to first onboarding screen
-    Future.delayed(const Duration(seconds: 5), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        _createFadeRoute(const FirstOnboardingScreen()),
-      );
-    });
-  }
+/// 0-A: the yellow logo screen, shown while the app checks the saved login.
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              dark
-                  ? 'assets/images/pattern_dark.png'
-                  : 'assets/images/pattern.png',
-              fit: BoxFit.fitWidth,
-              alignment: Alignment.topCenter,
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 200,
-                  ),
-                  const SizedBox(height: 25),
-                  if (showLoader)
-                    const CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.green, // Replaces gradient
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return const AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.yellow,
+        body: Center(child: YumQuickLogo()),
       ),
     );
   }
 }
 
-class FirstOnboardingScreen extends StatelessWidget {
-  const FirstOnboardingScreen({super.key});
+/// 1-A to 1-C, on first launch only. Skip or Get Started opens the welcome
+/// screen and remembers that onboarding was seen.
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const List<_PageData> _pages = [
+    (
+      image: 'assets/images/onboarding_1.jpg',
+      icon: AppIcons.orderSwap,
+      title: 'Order For Food',
+      body: 'Browse dishes from restaurants near you and order in a few taps.',
+    ),
+    (
+      image: 'assets/images/onboarding_2.jpg',
+      icon: AppIcons.card,
+      title: 'Easy Payment',
+      body: 'Pay by card or PayPal, and see the full price before you order.',
+    ),
+    (
+      image: 'assets/images/onboarding_3.jpg',
+      icon: AppIcons.rider,
+      title: 'Fast Delivery',
+      body: 'Only restaurants that can reach you, brought to your door.',
+    ),
+  ];
+
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _finish() async {
+    final nav = Navigator.of(context);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
+    await nav.pushReplacementNamed(AppRoutes.welcome);
+  }
+
+  void _next() {
+    if (_page == _pages.length - 1) {
+      unawaited(_finish());
+      return;
+    }
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _OnboardingPage(
-      image: 'assets/images/art_1.png',
-      title: 'Find your Comfort\nFood here',
-      body:
-          'Here You Can find a chef or dish for every\ntaste and color. Enjoy!',
-      buttonLabel: 'Next',
-      onNext: () => Navigator.of(context).push(
-        PageRouteBuilder<void>(
-          transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const SecondOnboardingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-              FadeTransition(opacity: animation, child: child),
+    final colors = context.colors;
+    final last = _page == _pages.length - 1;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: Theme.of(context).brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: colors.header,
+        body: SafeArea(
+          bottom: false,
+          child: ColoredBox(
+            color: colors.background,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      PageView(
+                        controller: _controller,
+                        onPageChanged: (i) => setState(() => _page = i),
+                        children: [for (final p in _pages) _Page(page: p)],
+                      ),
+                      if (!last)
+                        Positioned(
+                          top: 4,
+                          right: 8,
+                          child: TextButton.icon(
+                            onPressed: _finish,
+                            iconAlignment: IconAlignment.end,
+                            icon: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                            ),
+                            label: const Text('Skip'),
+                            style: TextButton.styleFrom(
+                              // White pill so it reads on any photo.
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.85,
+                              ),
+                              foregroundColor: AppColors.light.accentText,
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _Dots(count: _pages.length, current: _page),
+                const SizedBox(height: 24),
+                MajorButton(
+                  horizontal: 40,
+                  vertical: 10,
+                  textonButton: last ? 'Get Started' : 'Next',
+                  onPress: _next,
+                ),
+                SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class SecondOnboardingScreen extends StatelessWidget {
-  const SecondOnboardingScreen({super.key});
+typedef _PageData = ({
+  String image,
+  AssetImage icon,
+  String title,
+  String body,
+});
 
-  Future<void> _onNext(BuildContext context) async {
-    final nav = Navigator.of(context);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_onboarding', true);
-    await nav.pushReplacementNamed(AppRoutes.signUp);
-  }
+class _Page extends StatelessWidget {
+  const _Page({required this.page});
+
+  final _PageData page;
 
   @override
   Widget build(BuildContext context) {
-    return _OnboardingPage(
-      image: 'assets/images/art_2.png',
-      title: 'YumQuick is Where Your\nComfort Food Lives',
-      body: 'Enjoy a fast and smooth food delivery at\nyour doorstep',
-      buttonLabel: 'Get Started',
-      onNext: () => _onNext(context),
+    final colors = context.colors;
+    return Column(
+      children: [
+        // The photo takes what is left, so short phones don't overflow.
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(page.image, fit: BoxFit.cover),
+              // The sheet's rounded top edge, cut into the photo.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: -1,
+                height: 31,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.background,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            children: [
+              ImageIcon(page.icon, size: 44, color: AppColors.orange),
+              const SizedBox(height: 16),
+              Text(
+                page.title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.orange,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                page.body,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-/// Artwork, title, text and button. The artwork takes whatever height is
-/// left, so the page fits short phones without overflowing.
-class _OnboardingPage extends StatelessWidget {
-  const _OnboardingPage({
-    required this.image,
-    required this.title,
-    required this.body,
-    required this.buttonLabel,
-    required this.onNext,
-  });
+/// The kit's page dashes: the current one orange, the rest cream.
+class _Dots extends StatelessWidget {
+  const _Dots({required this.count, required this.current});
 
-  final String image;
-  final String title;
-  final String body;
-  final String buttonLabel;
-  final VoidCallback onNext;
+  final int count;
+  final int current;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            children: [
-              Expanded(child: Image.asset(image, fit: BoxFit.contain)),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+    return Semantics(
+      label: 'Page ${current + 1} of $count',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < count; i++)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == current ? 24 : 16,
+              height: 4,
+              decoration: BoxDecoration(
+                color: i == current ? AppColors.orange : context.colors.field,
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(height: 16),
-              Text(
-                body,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w300,
-                ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 0-B: orange screen with the logo, Log In and Sign Up.
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.orange,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              child: Column(
+                children: [
+                  const YumQuickLogo(onOrange: true),
+                  const SizedBox(height: 24),
+                  // Large bold white on orange: 3.6:1 passes for large text.
+                  const Text(
+                    'Food from restaurants near you, delivered fast.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: 210,
+                    child: MajorButton(
+                      horizontal: 16,
+                      vertical: 10,
+                      textonButton: 'Log In',
+                      tone: ButtonTone.yellow,
+                      onPress: () =>
+                          Navigator.pushNamed(context, AppRoutes.signIn),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 210,
+                    child: MajorButton(
+                      horizontal: 16,
+                      vertical: 10,
+                      textonButton: 'Sign Up',
+                      tone: ButtonTone.cream,
+                      onPress: () =>
+                          Navigator.pushNamed(context, AppRoutes.signUp),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
-              MajorButton(
-                horizontal: 50,
-                vertical: 20,
-                textonButton: buttonLabel,
-                onPress: onNext,
-              ),
-            ],
+            ),
           ),
         ),
       ),

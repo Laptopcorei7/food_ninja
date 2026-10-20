@@ -1,71 +1,116 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
+import 'package:food_ninja/src/widgets/sheet_scaffold.dart';
 
-/// Pattern header, logo and title shared by sign in and sign up (1.4, 1.5).
-///
-/// Both screens draw the header in the same place, so when one fades in over
-/// the other the header looks still. The title and form below it slide up and
-/// fade in with the route animation.
+/// Kit page shape for sign in and sign up (2-A, 2-C): header title, then a
+/// scrolling form on the sheet. Sign in and sign up fade into each other, so
+/// the header looks still while the form slides up.
 class AuthLayout extends StatelessWidget {
-  const AuthLayout({required this.title, required this.children, super.key});
+  const AuthLayout({
+    required this.title,
+    required this.children,
+    this.heading,
+    this.intro,
+    super.key,
+  });
 
+  /// In the header: "Log In", "New Account".
   final String title;
+
+  /// Large text at the top of the sheet: "Welcome".
+  final String? heading;
+  final String? intro;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textTheme = Theme.of(context).textTheme;
     final form = CurvedAnimation(
       parent: ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation,
       curve: Curves.easeOutCubic,
     );
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Image.asset(
-              dark
-                  ? 'assets/images/pattern_dark.png'
-                  : 'assets/images/pattern.png',
-              fit: BoxFit.fitWidth,
-              alignment: Alignment.topCenter,
+    return SheetScaffold(
+      title: title,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+        child: FadeTransition(
+          opacity: form,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(form),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (heading != null) ...[
+                  Text(heading!, style: textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                ],
+                if (intro != null) ...[
+                  Text(intro!, style: textTheme.bodyMedium),
+                  const SizedBox(height: 24),
+                ],
+                ...children,
+              ],
             ),
           ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(25, 16, 25, 16),
-              child: Column(
-                children: [
-                  Image.asset('assets/images/logo.png', height: 140),
-                  const SizedBox(height: 24),
-                  FadeTransition(
-                    opacity: form,
-                    child: SlideTransition(
-                      position: Tween(
-                        begin: const Offset(0, 0.1),
-                        end: Offset.zero,
-                      ).animate(form),
-                      child: Column(
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          ...children,
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The kit's field: a label above a cream box.
+class AuthTextField extends StatelessWidget {
+  const AuthTextField({
+    required this.controller,
+    required this.label,
+    this.hint,
+    this.keyboardType,
+    this.obscureText = false,
+    this.suffix,
+    this.autofillHints,
+    this.textInputAction = TextInputAction.next,
+    this.onSubmitted,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final Widget? suffix;
+  final Iterable<String>? autofillHints;
+  final TextInputAction textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Screen readers get the label on the field itself (below), not
+          // twice. The eye button stays its own node.
+          ExcludeSemantics(
+            child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          const SizedBox(height: 8),
+          Semantics(
+            label: label,
+            child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            obscureText: obscureText,
+            autofillHints: autofillHints,
+            textInputAction: textInputAction,
+            onSubmitted: onSubmitted,
+            style: Theme.of(context).textTheme.bodyLarge,
+            decoration: InputDecoration(hintText: hint, suffixIcon: suffix),
             ),
           ),
         ],
@@ -74,45 +119,7 @@ class AuthLayout extends StatelessWidget {
   }
 }
 
-/// Text field with the green icon in front, as in 1.5.
-class AuthTextField extends StatelessWidget {
-  const AuthTextField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.keyboardType,
-    this.obscureText = false,
-    this.suffix,
-    super.key,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final String icon;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final Widget? suffix;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
-          child: Image.asset(icon, width: 22, height: 22),
-        ),
-        prefixIconConstraints: const BoxConstraints(),
-        suffixIcon: suffix,
-      ),
-    );
-  }
-}
-
-/// Eye button that shows or hides the password.
+/// Orange eye that shows or hides the password.
 class PasswordToggle extends StatelessWidget {
   const PasswordToggle({
     required this.obscured,
@@ -128,18 +135,16 @@ class PasswordToggle extends StatelessWidget {
     return IconButton(
       tooltip: obscured ? 'Show password' : 'Hide password',
       onPressed: onPressed,
-      icon: Image.asset(
-        obscured ? 'assets/images/hide.png' : 'assets/images/show.png',
-        width: 20,
-        height: 20,
-        // The eye icons are single-colour; tint them so they show in dark mode.
-        color: context.colors.textPrimary.withValues(alpha: 0.5),
+      icon: ImageIcon(
+        obscured ? AppIcons.eyeOff : AppIcons.eye,
+        size: 22,
+        color: AppColors.orange,
       ),
     );
   }
 }
 
-/// "Or Continue With" and the Facebook and Google buttons.
+/// "or sign up with" and the round Google and Facebook buttons.
 class SocialSignInButtons extends StatelessWidget {
   const SocialSignInButtons({super.key});
 
@@ -147,68 +152,76 @@ class SocialSignInButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
-          'Or Continue With',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 16),
+        Text('or sign up with', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 8),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: _button(context, 'Facebook', 'assets/images/facebook.png'),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: _button(context, 'Google', 'assets/images/google.png'),
-            ),
+            _button(context, 'Google', AppIcons.google),
+            const SizedBox(width: 8),
+            _button(context, 'Facebook', AppIcons.facebook),
           ],
         ),
       ],
     );
   }
 
-  Widget _button(BuildContext context, String label, String iconPath) {
-    final colors = context.colors;
-    return OutlinedButton.icon(
-      // Social sign in is not built yet.
-      onPressed: () {},
-      icon: Image.asset(iconPath, height: 25, width: 25),
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+  Widget _button(BuildContext context, String name, AssetImage icon) {
+    return IconButton(
+      tooltip: 'Continue with $name',
+      // Social sign in is not built yet; say so instead of doing nothing.
+      onPressed: () => ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('$name sign in is coming soon.')),
+        ),
+      style: IconButton.styleFrom(
+        backgroundColor: context.colors.soft,
+        fixedSize: const Size.square(44),
       ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colors.textPrimary,
-        backgroundColor: colors.surface,
-        side: BorderSide(color: colors.border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
+      icon: ImageIcon(icon, size: 22, color: AppColors.orange),
     );
   }
 }
 
-/// Green underlined link used under the auth forms.
+/// "Don't have an account? Sign Up": plain text, then an orange link.
 class AuthLink extends StatelessWidget {
-  const AuthLink({required this.label, required this.onTap, super.key});
+  const AuthLink({
+    required this.label,
+    required this.onTap,
+    this.prefix,
+    super.key,
+  });
 
+  final String? prefix;
   final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: AppColors.greenDark,
-          decoration: TextDecoration.underline,
-          decorationColor: AppColors.greenDark,
+    final colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (prefix != null)
+          Flexible(
+            child: Text(prefix!, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            foregroundColor: colors.accentText,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            minimumSize: const Size(48, 40),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          child: Text(label),
         ),
-      ),
+      ],
     );
   }
 }
