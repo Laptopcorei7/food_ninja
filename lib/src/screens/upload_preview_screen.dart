@@ -94,8 +94,10 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
             bottom: -8,
             child: IconButton.filled(
               tooltip: 'Choose another photo',
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, AppRoutes.uploadPhoto),
+              onPressed: () => Navigator.pushReplacementNamed(
+                context,
+                AppRoutes.uploadPhoto,
+              ),
               style: IconButton.styleFrom(
                 backgroundColor: AppColors.orange,
                 side: BorderSide(color: context.colors.background, width: 3),

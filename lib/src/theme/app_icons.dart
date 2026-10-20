@@ -14,17 +14,15 @@ abstract final class AppIcons {
   static const navOrders = AssetImage('$_dir/nav_orders.png');
   static const navSupport = AssetImage('$_dir/nav_support.png');
 
-  // food categories, outline and filled (selected)
+  // food categories. Soups, grills and burgers are drawn in the kit's line
+  // style (the kit has no icon for them).
   static const catSnacks = AssetImage('$_dir/cat_snacks.png');
   static const catMeal = AssetImage('$_dir/cat_meal.png');
-  static const catVegan = AssetImage('$_dir/cat_vegan.png');
+  static const catSoups = AssetImage('$_dir/cat_soups.png');
+  static const catGrills = AssetImage('$_dir/cat_grills.png');
+  static const catBurgers = AssetImage('$_dir/cat_burgers.png');
   static const catDessert = AssetImage('$_dir/cat_dessert.png');
   static const catDrinks = AssetImage('$_dir/cat_drinks.png');
-  static const catSnacksFilled = AssetImage('$_dir/cat_snacks_filled.png');
-  static const catMealFilled = AssetImage('$_dir/cat_meal_filled.png');
-  static const catVeganFilled = AssetImage('$_dir/cat_vegan_filled.png');
-  static const catDessertFilled = AssetImage('$_dir/cat_dessert_filled.png');
-  static const catDrinksFilled = AssetImage('$_dir/cat_drinks_filled.png');
 
   static const alert = AssetImage('$_dir/alert.png');
   static const apple = AssetImage('$_dir/apple.png');
@@ -61,6 +59,8 @@ abstract final class AppIcons {
   static const paypal = AssetImage('$_dir/paypal.png');
   static const phone = AssetImage('$_dir/phone.png');
   static const rider = AssetImage('$_dir/rider.png');
+  // Drawn to match cart and bell; the kit has no search icon.
+  static const search = AssetImage('$_dir/search.png');
   static const send = AssetImage('$_dir/send.png');
   static const settings = AssetImage('$_dir/settings.png');
   static const share = AssetImage('$_dir/share.png');

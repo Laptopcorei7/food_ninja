@@ -28,7 +28,8 @@ class Here {
 }
 
 class LocationService {
-  final _geocoding = Geocoding();
+  // Late: only needed after a GPS fix, and creating it needs the platform.
+  late final _geocoding = Geocoding();
 
   /// The phone's position, or the saved address when GPS is off, refused or
   /// too slow. Throws only when neither is available.

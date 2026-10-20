@@ -94,16 +94,6 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color accentText;
   final Color shadow;
 
-  // Old names, kept until the screens are rebuilt on the kit (redesign
-  // steps 2-3), then deleted.
-  static const Color green = orange;
-  static const Color greenDark = orange;
-  static const brandGradient = LinearGradient(colors: [orange, orange]);
-  Color get searchField => surface;
-  Color get inactive => soft;
-  Color get border => divider;
-  Color get backButton => soft;
-
   @override
   AppColors copyWith({
     Color? header,

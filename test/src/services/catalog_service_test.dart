@@ -141,6 +141,142 @@ void main() {
       expect(server.requests, isEmpty);
     });
 
+    test('menuItems sends every filter, and the delivery range by default',
+        () async {
+      final server = page([]);
+      await server.run(
+        () => catalog.menuItems(
+          lat: 6.67,
+          lng: -1.57,
+          filter: const MenuFilter(
+            category: 'grills',
+            sort: 'rating',
+            minRating: 4,
+            maxPrice: 60,
+          ),
+        ),
+      );
+      final q = server.last.url.queryParameters;
+      expect(q['category'], 'grills');
+      expect(q['sort'], 'rating');
+      expect(q['minRating'], '4');
+      expect(q['maxPrice'], '60.0');
+      expect(q['maxKm'], '$deliveryRangeKm');
+    });
+
+    test('forYou asks for the picks near the user', () async {
+      final server = page([
+        {'_id': 'm1', 'name': 'Waakye'},
+      ]);
+      final picks = await server.run(
+        () => catalog.forYou(lat: 6.67, lng: -1.57, limit: 8),
+      );
+      expect(picks.single.name, 'Waakye');
+      expect(server.last.url.path, '/api/v1/menu-items/for-you');
+      expect(server.last.url.queryParameters['limit'], '8');
+      expect(server.last.url.queryParameters['lat'], '6.67');
+    });
+
+    test('a dish list reads rating and description', () async {
+      final server = page([
+        {
+          '_id': 'm1',
+          'name': 'Kebab',
+          'price': 30,
+          'rating': 4.6,
+          'description': 'Beef, pepper, onion',
+          'restaurant': {'_id': 'r1', 'name': 'Buka'},
+        },
+      ]);
+      final item =
+          (await server.run(() => catalog.menuItems(lat: 0, lng: 0))).single;
+      expect(item.rating, 4.6);
+      expect(item.description, 'Beef, pepper, onion');
+      expect(item.restaurantName, 'Buka');
+    });
+
+    test('priceRange reads min and max, ignoring the price filter', () async {
+      final server = FakeServer(
+        (_) async => FakeServer.reply(200, {
+          'success': true,
+          'data': {
+            'items': <Object>[],
+            'priceRange': {'min': 5, 'max': 200},
+          },
+        }),
+      );
+      final range = await server.run(
+        () => catalog.priceRange(
+          lat: 0,
+          lng: 0,
+          filter: const MenuFilter(maxPrice: 20, category: 'drinks'),
+        ),
+      );
+      expect(range, (5.0, 200.0));
+      final q = server.last.url.queryParameters;
+      expect(q.containsKey('maxPrice'), isFalse);
+      expect(q['category'], 'drinks');
+    });
+
+    test('priceRange is null when nothing matches', () async {
+      final server = FakeServer(
+        (_) async => FakeServer.reply(200, {
+          'success': true,
+          'data': {'items': <Object>[], 'priceRange': null},
+        }),
+      );
+      expect(
+        await server.run(() => catalog.priceRange(lat: 0, lng: 0)),
+        isNull,
+      );
+    });
+
+    test('restaurant sends the position for its distance', () async {
+      final server = FakeServer(
+        (_) async => FakeServer.reply(200, {
+          'success': true,
+          'data': {'_id': 'r1', 'name': 'Buka', 'distanceKm': 2.3},
+        }),
+      );
+      final r = await server.run(
+        () => catalog.restaurant('r1', lat: 6.67, lng: -1.57),
+      );
+      expect(r.distanceKm, 2.3);
+      expect(server.last.url.path, '/api/v1/restaurants/r1');
+      expect(server.last.url.queryParameters['lat'], '6.67');
+    });
+
+    test('restaurantMenu reads the plain list with bare restaurant ids',
+        () async {
+      final server = FakeServer(
+        (_) async => FakeServer.reply(200, {
+          'success': true,
+          'data': [
+            {'_id': 'm1', 'name': 'Waakye', 'restaurant': 'r1'},
+          ],
+          'total': 1,
+        }),
+      );
+      final menu = await server.run(() => catalog.restaurantMenu('r1'));
+      expect(menu.single.name, 'Waakye');
+      expect(menu.single.restaurantName, isNull);
+      expect(server.last.url.path, '/api/v1/restaurants/r1/menu');
+    });
+
+    test('vouchers reads the offers', () async {
+      final server = FakeServer(
+        (_) async => FakeServer.reply(200, {
+          'success': true,
+          'data': [
+            {'_id': 'v1', 'title': 'Jollof Friday', 'discountAmount': 10},
+          ],
+        }),
+      );
+      final offers = await server.run(catalog.vouchers);
+      expect(offers.single.title, 'Jollof Friday');
+      expect(offers.single.discountAmount, 10);
+    });
+
     test('a 400 shows the server message', () async {
       final server = FakeServer(
         (_) async => FakeServer.reply(400, {'message': 'Unknown category'}),
