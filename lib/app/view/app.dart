@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/screens/onboarding_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_theme.dart';
@@ -43,7 +44,7 @@ Future<(String, Object?)> _resolveStartRoute() async {
   }
   final seenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
   if (!seenOnboarding) return (AppRoutes.onboarding, null);
-  if (await auth.getToken() == null) return (AppRoutes.signIn, null);
+  if (await auth.getToken() == null) return (AppRoutes.welcome, null);
 
   // Resume an unfinished sign-up at its first missing step.
   try {
@@ -61,7 +62,11 @@ Future<(String, Object?)> _resolveStartRoute() async {
 }
 
 // Resolved once: App rebuilds on every theme change and must not re-run this.
-final Future<(String, Object?)> _startRoute = _resolveStartRoute();
+// The splash stays at least 900 ms so it doesn't flash.
+final Future<(String, Object?)> _startRoute = (
+  _resolveStartRoute(),
+  Future<void>.delayed(const Duration(milliseconds: 900)),
+).wait.then((results) => results.$1);
 
 class App extends StatelessWidget {
   const App({required this.themeCubit, super.key});
@@ -85,9 +90,7 @@ class App extends StatelessWidget {
             future: _startRoute,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
+                return const SplashScreen();
               }
               final (name, arg) = snapshot.data ?? (AppRoutes.onboarding, null);
               return AppRoutes.page(name, arg)!;

@@ -1,29 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
+import 'package:food_ninja/src/widgets/major_button.dart';
 
-/// Shows a full-screen semi-transparent overlay with a centred green spinner.
-/// The caller dismisses it with Navigator.of(context).pop() when ready.
+/// Dims the screen with an orange spinner in the middle. The caller
+/// dismisses it with Navigator.of(context).pop() when ready.
 Future<void> showLoadingOverlay(BuildContext context) async {
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.black54,
     builder: (_) => const Center(
-      child: CircularProgressIndicator(
-        strokeWidth: 3,
-        valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
-      ),
+      child: CircularProgressIndicator(color: AppColors.orange),
     ),
   );
 }
 
+/// The kit's confirm panel (4.1.1-S "Are you sure you want to log out?"):
+/// centred text, then Cancel (peach) and the action (orange) side by side.
 class AppDialog extends StatelessWidget {
   const AppDialog({
     required this.title,
     required this.message,
     required this.primaryLabel,
     required this.onPrimary,
-    this.imagePath,
+    this.success = false,
     this.secondaryLabel,
     this.onSecondary,
     this.primaryIsDestructive = false,
@@ -34,106 +35,75 @@ class AppDialog extends StatelessWidget {
   final String message;
   final String primaryLabel;
   final VoidCallback onPrimary;
-  final String? imagePath;
+
+  /// Shows the orange check above the title.
+  final bool success;
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
+
+  /// Kept for callers; the kit draws destructive actions orange too, and the
+  /// title already says what happens.
   final bool primaryIsDestructive;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final hasSecondary = secondaryLabel != null && onSecondary != null;
+    Widget button(String label, VoidCallback onTap, ButtonTone tone) =>
+        MajorButton(
+          horizontal: 12,
+          vertical: 8,
+          textonButton: label,
+          tone: tone,
+          onPress: onTap,
+        );
+
     return Dialog(
-      backgroundColor: context.colors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: context.colors.background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (imagePath != null) ...[
-              Image.asset(imagePath!, height: 90),
+            if (success) ...[
+              const ImageIcon(
+                AppIcons.checkCircle,
+                size: 64,
+                color: AppColors.orange,
+              ),
               const SizedBox(height: 16),
             ],
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 10),
+            Text(title, textAlign: TextAlign.center, style: textTheme.titleLarge),
+            const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w300,
-                fontSize: 13,
-                color: Color(0xFF9D9D9D),
-                height: 1.5,
-              ),
+              style: textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            _PrimaryButton(
-              label: primaryLabel,
-              onTap: onPrimary,
-              isDestructive: primaryIsDestructive,
-            ),
-            if (secondaryLabel != null && onSecondary != null) ...[
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: onSecondary,
-                child: Text(
-                  secondaryLabel!,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13,
-                    color: Color(0xFF9D9D9D),
+            if (hasSecondary)
+              Row(
+                children: [
+                  Expanded(
+                    child: button(
+                      secondaryLabel!,
+                      onSecondary!,
+                      ButtonTone.soft,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: button(primaryLabel, onPrimary, ButtonTone.primary),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: 200,
+                child: button(primaryLabel, onPrimary, ButtonTone.primary),
               ),
-            ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.label,
-    required this.onTap,
-    required this.isDestructive,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final bool isDestructive;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          gradient: isDestructive
-              ? null
-              : const LinearGradient(
-                  colors: [AppColors.green, AppColors.greenDark],
-                ),
-          color: isDestructive ? AppColors.error : null,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-            color: Colors.white,
-          ),
         ),
       ),
     );

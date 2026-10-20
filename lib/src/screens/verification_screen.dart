@@ -5,12 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/services/sms_code_listener.dart';
-import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/auth_layout.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 
 /// Sends a 4-digit code to [contact] and checks what the user types.
 ///
@@ -231,102 +229,37 @@ class _VerificationScreenState extends State<VerificationScreen> {
             ? '${contact.substring(0, contact.length - 4)}****'
             : contact;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 45,
-                      height: 45,
-                      child: CustomBackButton(
-                        onTap: () => Navigator.maybePop(context),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Enter 4-digit\nVerification code',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 25,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Code sent to $maskedContact. This code will expire in $_formattedTime',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w300,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(4, _otpBox),
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: _secondsLeft == 0 && !_rateLimited
-                          ? TextButton(
-                              onPressed: _resendOtp,
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(
-                                  colors: [
-                                    AppColors.green,
-                                    AppColors.greenDark,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ).createShader(
-                                  Rect.fromLTWH(
-                                    0,
-                                    0,
-                                    bounds.width,
-                                    bounds.height,
-                                  ),
-                                ),
-                                blendMode: BlendMode.srcIn,
-                                child: const Text(
-                                  'Resend Code',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: 176),
-                    Center(
-                      child: MajorButton(
-                        horizontal: 75,
-                        vertical: 23,
-                        textonButton: 'Next',
-                        onPress: _handleVerify,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return SetupLayout(
+      title: 'Enter Code',
+      intro: 'We sent a 4-digit code to $maskedContact. '
+          'It expires in $_formattedTime.',
+      buttonLabel: 'Verify',
+      onButton: _handleVerify,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < 4; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(child: _otpBox(i)),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_secondsLeft == 0 && !_rateLimited)
+          Center(
+            child: AuthLink(
+              prefix: "Didn't get it?",
+              label: 'Resend code',
+              onTap: _resendOtp,
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget _otpBox(int index) {
     return SizedBox(
-      width: 70,
-      height: 70,
+      height: 64,
       child: TextField(
         controller: _controllers[index],
         focusNode: _focusNodes[index],

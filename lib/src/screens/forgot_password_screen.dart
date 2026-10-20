@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
 /// Forgot password, step 1 (1.13): pick SMS or email and enter the contact.
@@ -78,101 +77,38 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            // Scrolls only when the content does not fit (keyboard open);
-            // otherwise Next stays at the bottom.
-            child: CustomScrollView(
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 45,
-                          height: 45,
-                          child: CustomBackButton(
-                            onTap: () => Navigator.maybePop(context),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Select which contact details should we use to '
-                          'reset your password',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w300,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _optionCard(
-                          method: 'sms',
-                          label: 'Via sms:',
-                          icon: Image.asset(
-                            'assets/images/message.png',
-                            width: 28,
-                            height: 28,
-                          ),
-                          field: PhoneFormField(
-                            controller: _phoneController,
-                            countrySelectorNavigator:
-                                const CountrySelectorNavigator
-                                    .draggableBottomSheet(),
-                            countryButtonStyle: const CountryButtonStyle(
-                              padding: EdgeInsets.only(right: 4),
-                            ),
-                            decoration: _fieldDecoration('Mobile Number'),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        _optionCard(
-                          method: 'email',
-                          label: 'Via email:',
-                          icon: Image.asset(
-                            'assets/images/email_1.png',
-                            width: 28,
-                            height: 28,
-                          ),
-                          field: TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            autocorrect: false,
-                            decoration: _fieldDecoration('Email'),
-                          ),
-                        ),
-                        const Spacer(),
-                        const SizedBox(height: 24),
-                        Center(
-                          child: MajorButton(
-                            horizontal: 75,
-                            vertical: 23,
-                            textonButton: 'Next',
-                            onPress: _handleNext,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    return SetupLayout(
+      title: 'Forgot Password',
+      intro: 'Choose where we should send a code to reset your password.',
+      onButton: _handleNext,
+      children: [
+        _optionCard(
+          method: 'sms',
+          label: 'By SMS',
+          icon: AppIcons.phone,
+          field: PhoneFormField(
+            controller: _phoneController,
+            countrySelectorNavigator:
+                const CountrySelectorNavigator.draggableBottomSheet(),
+            countryButtonStyle: const CountryButtonStyle(
+              padding: EdgeInsets.only(right: 4),
             ),
+            decoration: _fieldDecoration('Mobile number'),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        _optionCard(
+          method: 'email',
+          label: 'By email',
+          icon: AppIcons.mail,
+          field: TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            decoration: _fieldDecoration('Email'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -190,7 +126,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget _optionCard({
     required String method,
     required String label,
-    required Widget icon,
+    required AssetImage icon,
     required Widget field,
   }) {
     final selected = _method == method;
@@ -201,21 +137,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       label: label,
       child: GestureDetector(
         onTap: () => setState(() => _method = method),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? AppColors.green : colors.border,
+              color: selected ? AppColors.orange : colors.divider,
               width: selected ? 2 : 1,
             ),
-            boxShadow: [BoxShadow(color: colors.shadow, blurRadius: 50)],
           ),
           child: Row(
             children: [
-              icon,
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: colors.soft,
+                child: ImageIcon(icon, size: 24, color: AppColors.orange),
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

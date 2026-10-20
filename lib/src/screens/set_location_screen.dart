@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/auth_layout.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -218,160 +218,63 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            // Scrolls only when the content does not fit (short phone,
-            // keyboard open); otherwise Next stays at the bottom.
-            child: CustomScrollView(
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 45,
-                          height: 45,
-                          child: CustomBackButton(
-                            onTap: () => Navigator.maybePop(context),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Set Your Location',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'This data will be used for your delivery address',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w300,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: colors.border),
-                            boxShadow: [
-                              BoxShadow(color: colors.shadow, blurRadius: 50),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.orange
-                                          .withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: AppColors.orange,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Text(
-                                    'Your Location',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _locationController,
-                                minLines: 1,
-                                maxLines: 2,
-                                decoration: InputDecoration(
-                                  hintText: 'Street, area, city',
-                                  fillColor: colors.inactive,
-                                ),
-                              ),
-                              if (_status != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  _status!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colors.textPrimary
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: TextButton.icon(
-                                  onPressed: _locating ? null : _detect,
-                                  icon: _locating
-                                      ? const SizedBox.square(
-                                          dimension: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.green,
-                                          ),
-                                        )
-                                      : const Icon(Icons.my_location, size: 18),
-                                  label: const Text(
-                                    'Set Location',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: colors.textPrimary,
-                                    backgroundColor: colors.inactive,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Spacer(),
-                        Center(
-                          child: MajorButton(
-                            horizontal: 75,
-                            vertical: 23,
-                            textonButton: 'Next',
-                            onPress: _handleNext,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+    return SetupLayout(
+      title: 'Your Location',
+      intro: 'Where should we deliver? We fill it in from your phone, and you '
+          'can edit it.',
+      onButton: _handleNext,
+      children: [
+        // Kit 4.1.1-K: the big outline icon over the form.
+        const Center(
+          child: ImageIcon(
+            AppIcons.location,
+            size: 88,
+            color: AppColors.orange,
+          ),
+        ),
+        const SizedBox(height: 24),
+        AuthTextField(
+          controller: _locationController,
+          label: 'Address',
+          hint: 'Street, area, city',
+          autofillHints: const [AutofillHints.fullStreetAddress],
+          textInputAction: TextInputAction.done,
+        ),
+        if (_status != null) ...[
+          Text(
+            _status!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary,
                 ),
-              ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        Center(
+          child: TextButton.icon(
+            onPressed: _locating ? null : _detect,
+            icon: _locating
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.orange,
+                    ),
+                  )
+                : const Icon(Icons.my_location, size: 18),
+            label: const Text('Use my current location'),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.accentText,
+              backgroundColor: colors.soft,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

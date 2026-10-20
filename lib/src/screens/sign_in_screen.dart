@@ -77,45 +77,41 @@ class _SignInState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthLayout(
-      title: 'Login To Your Account',
+      title: 'Log In',
+      heading: 'Welcome back',
+      intro: 'Log in to order from restaurants near you.',
       children: [
         AuthTextField(
           controller: _emailController,
-          hint: 'Email',
-          icon: 'assets/images/email.png',
+          label: 'Email',
+          hint: 'example@example.com',
           keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
         ),
-        const SizedBox(height: 12),
         AuthTextField(
           controller: _passwordController,
-          hint: 'Password',
-          icon: 'assets/images/lock.png',
+          label: 'Password',
           obscureText: _obscurePassword,
+          autofillHints: const [AutofillHints.password],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleLogin(),
           suffix: PasswordToggle(
             obscured: _obscurePassword,
             onPressed: () =>
                 setState(() => _obscurePassword = !_obscurePassword),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             CustomCheckbox(
               value: _keepSignedIn,
+              label: 'Keep me signed in',
               onChanged: (val) => setState(() => _keepSignedIn = val),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Keep Me Signed In',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.colors.textPrimary.withValues(alpha: 0.5),
-                ),
-              ),
-            ),
             AuthLink(
-              label: 'Forgot Password?',
+              label: 'Forgot password?',
               onTap: () => Navigator.pushNamed(
                 context,
                 AppRoutes.forgotPassword,
@@ -124,23 +120,26 @@ class _SignInState extends State<SignInScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        const SocialSignInButtons(),
         const SizedBox(height: 24),
-        if (_isLoading)
-          const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(AppColors.green),
-          )
-        else
-          MajorButton(
-            horizontal: 50,
-            vertical: 18,
-            textonButton: 'Login',
-            onPress: _handleLogin,
-          ),
-        const SizedBox(height: 8),
+        Center(
+          child: _isLoading
+              ? const CircularProgressIndicator(color: AppColors.orange)
+              : SizedBox(
+                  width: 210,
+                  child: MajorButton(
+                    horizontal: 16,
+                    vertical: 10,
+                    textonButton: 'Log In',
+                    onPress: _handleLogin,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 24),
+        const SocialSignInButtons(),
+        const SizedBox(height: 16),
         AuthLink(
-          label: "Don't have an account? Sign Up",
+          prefix: "Don't have an account?",
+          label: 'Sign Up',
           onTap: () =>
               Navigator.pushReplacementNamed(context, AppRoutes.signUp),
         ),

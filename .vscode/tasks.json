@@ -14,7 +14,8 @@
         "${workspaceFolder}/scripts/run_dev.ps1",
         "-writeOnly"
       ],
-      "presentation": { "reveal": "silent" },
+      // Shown so you can see which address the app was built with.
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
       "problemMatcher": []
     }
   ]

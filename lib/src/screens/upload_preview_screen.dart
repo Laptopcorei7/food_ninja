@@ -5,10 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/major_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 
 class UploadPreviewScreen extends StatefulWidget {
   const UploadPreviewScreen({super.key, this.imagePath});
@@ -59,92 +58,52 @@ class _UploadPreviewState extends State<UploadPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 45,
-                      height: 45,
-                      child: CustomBackButton(
-                        onTap: () => Navigator.maybePop(context),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Upload Your Photo\nProfile',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 25,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'This data will be displayed in your account\nprofile for security',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w300,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _imagePreview(),
-                    const SizedBox(height: 150),
-                    Center(
-                      child: MajorButton(
-                        horizontal: 60,
-                        vertical: 20,
-                        textonButton: 'Next',
-                        onPress: _handleNext,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return SetupLayout(
+      title: 'Profile Photo',
+      intro: 'Happy with it? Tap the camera to pick another.',
+      onButton: _handleNext,
+      children: [_imagePreview()],
     );
   }
 
+  /// The kit's profile photo (4.1.1-I): rounded square, orange camera badge.
   Widget _imagePreview() {
+    final path = widget.imagePath;
     return Center(
       child: Stack(
-        alignment: Alignment.topRight,
+        clipBehavior: Clip.none,
         children: [
-          Container(
-            width: 250,
-            height: 250,
-            decoration: BoxDecoration(
-              color: context.colors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.colors.border),
-              image: widget.imagePath != null
-                  ? DecorationImage(
-                      image: FileImage(File(widget.imagePath!)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: Container(
+              width: 200,
+              height: 200,
+              color: context.colors.field,
+              child: path == null
+                  ? null
+                  : Image.file(
+                      File(path),
                       fit: BoxFit.cover,
-                    )
-                  : null,
+                      cacheWidth: 600,
+                      semanticLabel: 'Your new profile photo',
+                    ),
             ),
           ),
           Positioned(
-            top: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pushReplacementNamed(context, AppRoutes.uploadPhoto);
-              },
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.black54,
-                child: Icon(Icons.close, color: Colors.white, size: 18),
+            right: -8,
+            bottom: -8,
+            child: IconButton.filled(
+              tooltip: 'Choose another photo',
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, AppRoutes.uploadPhoto),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.orange,
+                side: BorderSide(color: context.colors.background, width: 3),
+              ),
+              icon: const ImageIcon(
+                AppIcons.camera,
+                size: 22,
+                color: Colors.white,
               ),
             ),
           ),

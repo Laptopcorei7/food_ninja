@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
+import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
-import 'package:food_ninja/src/widgets/custom_back_button.dart';
-import 'package:food_ninja/src/widgets/setup_pattern.dart';
+import 'package:food_ninja/src/widgets/setup_layout.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -92,112 +92,70 @@ class _UploadPhotoState extends State<UploadPhotoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          const SetupPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 45,
-                      height: 45,
-                      child: CustomBackButton(
-                        // maybePop: after a recovered restart there is no
-                        // earlier screen to return to.
-                        onTap: () => Navigator.maybePop(context),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Upload Your Photo\nProfile',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 25,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'This data will be displayed in your account\nprofile for security',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w300,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _fromGallery(context),
-                    const SizedBox(height: 30),
-                    _fromCamera(context),
-                  ],
+    return SetupLayout(
+      title: 'Profile Photo',
+      intro: 'Add a photo so riders know who to hand your order to.',
+      children: [
+        _SourceCard(
+          icon: AppIcons.image,
+          label: 'Choose from gallery',
+          onTap: () => _pick(ImageSource.gallery),
+        ),
+        const SizedBox(height: 16),
+        _SourceCard(
+          icon: AppIcons.camera,
+          label: 'Take a photo',
+          onTap: () => _pick(ImageSource.camera),
+        ),
+      ],
+    );
+  }
+}
+
+class _SourceCard extends StatelessWidget {
+  const _SourceCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final AssetImage icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: colors.soft,
+                child: ImageIcon(icon, size: 28, color: AppColors.orange),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-            ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppColors.orange,
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fromGallery(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => _pick(ImageSource.gallery),
-      style: ElevatedButton.styleFrom(
-        elevation: 0,
-        backgroundColor: context.colors.surface,
-        foregroundColor: context.colors.textPrimary,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: const Size(double.infinity, 100),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/gallery.png',
-            height: 50,
-            width: 50,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'From Gallery',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fromCamera(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => _pick(ImageSource.camera),
-      style: ElevatedButton.styleFrom(
-        elevation: 0,
-        backgroundColor: context.colors.surface,
-        foregroundColor: context.colors.textPrimary,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: const Size(double.infinity, 100),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/camera.png',
-            height: 50,
-            width: 50,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Take Photo',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-        ],
+        ),
       ),
     );
   }

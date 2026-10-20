@@ -16,6 +16,7 @@ import 'package:food_ninja/src/screens/verification_screen.dart';
 /// Route names. Navigate with `Navigator.pushNamed(context, AppRoutes.home)`.
 abstract final class AppRoutes {
   static const onboarding = '/onboarding';
+  static const welcome = '/welcome';
   static const signIn = '/login';
   static const signUp = '/signup';
   static const signUpProcess = '/process';
@@ -38,7 +39,8 @@ abstract final class AppRoutes {
   /// `resetCode` a (method, contact) record, `newPassword` the reset token
   /// and `search` a [SearchArgs].
   static Widget? page(String? name, Object? arg) => switch (name) {
-        onboarding => const LoadingScreen(),
+        onboarding => const OnboardingScreen(),
+        welcome => const WelcomeScreen(),
         signIn => const SignInScreen(),
         signUp => const SignUpScreen(),
         signUpProcess => const SignUpProcessScreen(),
