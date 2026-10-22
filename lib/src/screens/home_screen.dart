@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/screens/dish_list_screen.dart';
+import 'package:food_ninja/src/screens/favorites_screen.dart';
 import 'package:food_ninja/src/screens/menu_screen.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/services/location_service.dart';
@@ -39,6 +40,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     unawaited(_locate());
+    unawaited(_loadCartCount());
+  }
+
+  /// For the cart badge. A failure leaves the badge off; the location load
+  /// reports session and network problems.
+  Future<void> _loadCartCount() async {
+    try {
+      await CatalogService().refreshCartCount();
+    } on Exception catch (e) {
+      debugPrint('[Home] cart count failed: $e');
+    }
   }
 
   Future<void> _locate() async {
@@ -100,8 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onRetry: _locate,
             filter: _filter,
             onFilterChanged: (f) => setState(() => _filter = f),
+            actions: _actions,
           ),
-          const ComingSoonTab(title: 'Favorites', when: 'phase 8'),
+          FavoritesTab(here: _here, active: _tab == 2),
           const ComingSoonTab(title: 'My Orders', when: 'phase 6'),
           const ComingSoonTab(title: 'Help', when: 'phase 7'),
         ],
@@ -136,12 +149,76 @@ class ShopActions {
       );
 }
 
-/// Opens a restaurant's page; dish taps land there until the dish screen
-/// (phase 4).
+/// Home and Menu's header: the shop buttons, a big title and an orange
+/// line under it. Use with `SheetScaffold(headerHeight: height)`.
+class ShopTabHeader extends StatelessWidget {
+  const ShopTabHeader({
+    required this.actions,
+    required this.title,
+    required this.line,
+    super.key,
+  });
+
+  static const height = 124.0;
+
+  final ShopActions actions;
+  final String title;
+  final String line;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        actions.header(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          // One line each: the header has a fixed height, so a wrapped
+          // title would overflow it on narrow phones or large text.
+          child: Semantics(
+            header: true,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                maxLines: 1,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontSize: 30,
+                      color: colors.onHeader,
+                    ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            line,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: colors.accentText,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Opens a restaurant's page.
 void openRestaurant(BuildContext context, String? id, Here? here) {
   if (id == null) return;
   Navigator.of(context).pushNamed(AppRoutes.restaurant, arguments: (id, here));
 }
+
+/// Opens a dish's page; completes when the user comes back.
+Future<void> openDish(BuildContext context, MenuItem item, Here? here) =>
+    Navigator.of(context).pushNamed(AppRoutes.dish, arguments: (item, here));
 
 /// Home's greeting, by time of day.
 (String, String) greetingFor(DateTime now) => switch (now.hour) {
@@ -239,48 +316,9 @@ class _HomeTabState extends State<_HomeTab> {
   @override
   Widget build(BuildContext context) {
     final (hello, line) = greetingFor(DateTime.now());
-    final colors = context.colors;
     return SheetScaffold(
-      headerHeight: 124,
-      header: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          widget.actions.header(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            // One line each: the header has a fixed height, so a wrapped
-            // greeting would overflow it on narrow phones or large text.
-            child: Semantics(
-              header: true,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  hello,
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: 30,
-                        color: colors.onHeader,
-                      ),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              line,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: colors.accentText,
-              ),
-            ),
-          ),
-        ],
-      ),
+      headerHeight: ShopTabHeader.height,
+      header: ShopTabHeader(actions: widget.actions, title: hello, line: line),
       child: _body(),
     );
   }
@@ -344,8 +382,7 @@ class _HomeTabState extends State<_HomeTab> {
               width: 124,
               child: DishTile(
                 item: items[i],
-                onTap: () =>
-                    openRestaurant(context, items[i].restaurantId, here),
+                onTap: () => openDish(context, items[i], here),
               ),
             ),
           ),
@@ -448,16 +485,11 @@ class DishGrid extends StatelessWidget {
     required this.items,
     required this.here,
     this.shrinkWrap = false,
-    this.opensRestaurant = true,
     super.key,
   });
 
   final List<MenuItem> items;
   final Here? here;
-
-  /// False on a restaurant's own page, where the dish screen (phase 4) is
-  /// the only useful target.
-  final bool opensRestaurant;
 
   /// True inside another scroll view.
   final bool shrinkWrap;
@@ -479,9 +511,7 @@ class DishGrid extends StatelessWidget {
         item: items[i],
         photoHeight: 144,
         showRating: true,
-        onTap: opensRestaurant
-            ? () => openRestaurant(context, items[i].restaurantId, here)
-            : null,
+        onTap: () => openDish(context, items[i], here),
       ),
     );
   }

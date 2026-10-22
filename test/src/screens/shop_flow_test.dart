@@ -226,7 +226,8 @@ void main() {
     );
   });
 
-  testWidgets('Home has icon buttons, Menu has only its title', (tester) async {
+  testWidgets('Home and Menu both have the icon buttons, Menu says where',
+      (tester) async {
     final server = _server();
     await server.run(() async {
       await tester.pumpApp(const HomeScreen());
@@ -236,8 +237,11 @@ void main() {
       await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
     });
+    // Only the Menu tab is on stage, so each button is found once.
     expect(find.text('Menu'), findsOneWidget);
-    expect(find.byTooltip('Search'), findsNothing);
+    expect(find.textContaining('Dishes near'), findsOneWidget);
+    expect(find.byTooltip('Search'), findsOneWidget);
+    expect(find.byTooltip('Cart'), findsOneWidget);
   });
 
   testWidgets('changing the sort reloads the menu', (tester) async {

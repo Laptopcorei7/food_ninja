@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
 
@@ -29,7 +30,24 @@ class ShopHeader extends StatelessWidget {
             tooltip: 'Search',
             onTap: onSearch,
           ),
-          HeaderIconButton(icon: AppIcons.cart, tooltip: 'Cart', onTap: onCart),
+          ValueListenableBuilder(
+            valueListenable: CatalogService.cartCount,
+            builder: (context, count, _) {
+              final n = count ?? 0;
+              return Badge(
+                isLabelVisible: n > 0,
+                label: Text(n > 99 ? '99+' : '$n'),
+                backgroundColor: AppColors.orange,
+                textColor: Colors.white,
+                offset: const Offset(-2, 2),
+                child: HeaderIconButton(
+                  icon: AppIcons.cart,
+                  tooltip: n > 0 ? 'Cart, $n items' : 'Cart',
+                  onTap: onCart,
+                ),
+              );
+            },
+          ),
           HeaderIconButton(
             icon: AppIcons.bell,
             tooltip: 'Notifications',

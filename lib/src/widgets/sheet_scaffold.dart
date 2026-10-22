@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/custom_back_button.dart';
 
@@ -44,6 +45,25 @@ class SheetScaffold extends StatelessWidget {
     final colors = context.colors;
     final textTheme = Theme.of(context).textTheme;
     final canPop = Navigator.of(context).canPop();
+    // Status bar icons that show on this header: dark on the yellow, light
+    // on dark mode's brown. Without this they kept whatever the last screen
+    // set and vanished on the brown header.
+    final overlay =
+        ThemeData.estimateBrightnessForColor(colors.header) == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay.copyWith(statusBarColor: Colors.transparent),
+      child: _scaffold(context, colors, textTheme, canPop),
+    );
+  }
+
+  Widget _scaffold(
+    BuildContext context,
+    AppColors colors,
+    TextTheme textTheme,
+    bool canPop,
+  ) {
     return Scaffold(
       backgroundColor: colors.header,
       bottomNavigationBar: bottomNavigationBar,

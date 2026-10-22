@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
@@ -67,6 +69,26 @@ class Restaurant {
   final double? distanceKm;
 }
 
+/// A portion or size of a dish, priced on top of the dish's own price.
+@immutable
+class DishOption {
+  const DishOption({
+    required this.id,
+    required this.name,
+    required this.extraPrice,
+  });
+
+  factory DishOption.fromJson(Map<String, dynamic> json) => DishOption(
+        id: json['_id'] as String,
+        name: json['name'] as String,
+        extraPrice: (json['extraPrice'] as num?)?.toDouble() ?? 0,
+      );
+
+  final String id;
+  final String name;
+  final double extraPrice;
+}
+
 @immutable
 class MenuItem {
   const MenuItem({
@@ -81,6 +103,9 @@ class MenuItem {
     required this.distanceKm,
     this.rating = 0,
     this.description,
+    this.ingredients = const [],
+    this.options = const [],
+    this.isFavorite = false,
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> json) {
@@ -102,6 +127,13 @@ class MenuItem {
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       rating: (json['rating'] as num?)?.toDouble() ?? 0,
       description: json['description'] as String?,
+      ingredients: [...?(json['ingredients'] as List?)?.cast<String>()],
+      options: [
+        ...?(json['options'] as List?)
+            ?.cast<Map<String, dynamic>>()
+            .map(DishOption.fromJson),
+      ],
+      isFavorite: json['isFavorite'] == true,
     );
   }
 
@@ -111,6 +143,14 @@ class MenuItem {
   final double price;
   final double rating;
   final String? description;
+  final List<String> ingredients;
+
+  /// Portions to choose from; the first is the default. Empty for most
+  /// dishes.
+  final List<DishOption> options;
+
+  /// Only set by [CatalogService.dish]; lists leave it false.
+  final bool isFavorite;
   final String? category;
   final int orderCount;
   final String? restaurantId;
@@ -327,32 +367,110 @@ class CatalogService {
     throw _unexpected('list');
   }
 
+  /// One dish with its portions and whether the user saved it, with its
+  /// distance when [lat], [lng] are given.
+  Future<MenuItem> dish(String id, {double? lat, double? lng}) async {
+    final data = await _get('menu-items/$id', {
+      if (lat != null && lng != null) ...{'lat': '$lat', 'lng': '$lng'},
+    });
+    if (data is! Map<String, dynamic>) throw _unexpected('dish');
+    return MenuItem.fromJson(data);
+  }
+
+  /// How many dishes are in the user's carts, for the cart badge. Null
+  /// until the first [refreshCartCount] or [addToCart].
+  static final cartCount = ValueNotifier<int?>(null);
+
+  /// Adds [qty] of a dish (in [optionId]'s portion) to the cart of its
+  /// restaurant; the server merges it with the same dish already there.
+  Future<void> addToCart(String menuItemId, int qty, {String? optionId}) async {
+    final data = await _send(
+      'POST',
+      'cart/items',
+      body: {
+        'menuItemId': menuItemId,
+        'qty': qty,
+        if (optionId != null) 'optionId': optionId,
+      },
+    );
+    _setCartCount(data);
+  }
+
+  Future<void> refreshCartCount() async =>
+      _setCartCount(await _get('cart', {}));
+
+  void _setCartCount(Object? data) {
+    final count = data is Map<String, dynamic> ? data['cartCount'] : null;
+    if (count is num) cartCount.value = count.toInt();
+  }
+
+  /// The user's saved dishes, newest first, with distances when [lat],
+  /// [lng] are given.
+  Future<List<MenuItem>> favorites({double? lat, double? lng}) async {
+    final data = await _get('users/me/favorites', {
+      'limit': '$maxPage',
+      if (lat != null && lng != null) ...{'lat': '$lat', 'lng': '$lng'},
+    });
+    return _items(data).map(MenuItem.fromJson).toList();
+  }
+
+  /// Saves or unsaves a dish.
+  Future<void> setFavorite(String menuItemId, {required bool saved}) =>
+      _send(saved ? 'PUT' : 'DELETE', 'users/me/favorites/$menuItemId');
+
   Exception _unexpected(String what) =>
       Exception("Couldn't load the $what. Please try again.");
 
-  /// GETs [path] and returns the body's `data`.
-  Future<Object?> _get(String path, Map<String, String> query) async {
+  Future<Object?> _get(String path, Map<String, String> query) =>
+      _send('GET', path, query: query);
+
+  /// Sends [method] to [path] and returns the body's `data`.
+  Future<Object?> _send(
+    String method,
+    String path, {
+    Map<String, String> query = const {},
+    Map<String, Object?>? body,
+  }) async {
     final uri = Uri.parse('$_baseUrl/$path')
         .replace(queryParameters: query.isEmpty ? null : query);
-    if (kDebugMode) debugPrint('[CatalogService] GET $uri');
+    if (kDebugMode) debugPrint('[CatalogService] $method $uri');
     final token = await AuthService().getToken();
     if (token == null) throw SessionExpiredException();
 
+    final headers = {
+      'Authorization': 'Bearer $token',
+      if (body != null) 'Content-Type': 'application/json',
+    };
+    final encoded = body == null ? null : jsonEncode(body);
     final http.Response response;
     try {
-      response = await http.get(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 15));
+      response = await switch (method) {
+        'POST' => http.post(uri, headers: headers, body: encoded),
+        'PUT' => http.put(uri, headers: headers, body: encoded),
+        'DELETE' => http.delete(uri, headers: headers),
+        _ => http.get(uri, headers: headers),
+      }
+          .timeout(const Duration(seconds: 15));
     } catch (e) {
       throw toUserError(e);
     }
 
     if (response.statusCode == 401) throw SessionExpiredException();
-    final body = decodeBody(response);
-    if (response.statusCode == 200) return body['data'];
+    final decoded = decodeBody(response);
+    if (response.statusCode == 429) {
+      throw RateLimitException(
+        (decoded['message'] as String?) ??
+            'Too many requests. Please wait a moment.',
+      );
+    }
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded['data'];
+    }
     throw Exception(
-      (body['message'] as String?) ?? "Couldn't load $path. Please try again.",
+      (decoded['message'] as String?) ??
+          (method == 'GET'
+              ? "Couldn't load $path. Please try again."
+              : 'Something went wrong. Please try again.'),
     );
   }
 }
