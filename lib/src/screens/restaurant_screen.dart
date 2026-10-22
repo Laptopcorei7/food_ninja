@@ -151,7 +151,6 @@ class _RestaurantScreenState extends State<RestaurantScreen> {
             items: groups[slug]!,
             here: widget.here,
             shrinkWrap: true,
-            opensRestaurant: false,
           ),
         ],
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/widgets/app_bottom_nav.dart';
@@ -196,6 +197,24 @@ void main() {
         AppColors.dark.header,
       );
     });
+
+    for (final dark in [false, true]) {
+      testWidgets(
+          'status bar icons show on the ${dark ? 'brown' : 'yellow'} header',
+          (tester) async {
+        await tester.pumpApp(
+          const SheetScaffold(title: 'Menu', child: SizedBox()),
+          dark: dark,
+        );
+        final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
+        );
+        expect(
+          region.value.statusBarIconBrightness,
+          dark ? Brightness.light : Brightness.dark,
+        );
+      });
+    }
   });
 
   testWidgets('YumQuickLogo reads as one name to screen readers',

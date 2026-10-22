@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_ninja/src/screens/dish_list_screen.dart';
+import 'package:food_ninja/src/screens/dish_screen.dart';
 import 'package:food_ninja/src/screens/forgot_password_screen.dart';
 import 'package:food_ninja/src/screens/home_screen.dart';
 import 'package:food_ninja/src/screens/new_password_screen.dart';
@@ -14,6 +15,7 @@ import 'package:food_ninja/src/screens/sign_up_screen.dart';
 import 'package:food_ninja/src/screens/upload_photo_screen.dart';
 import 'package:food_ninja/src/screens/upload_preview_screen.dart';
 import 'package:food_ninja/src/screens/verification_screen.dart';
+import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/services/location_service.dart';
 
 /// Route names. Navigate with `Navigator.pushNamed(context, AppRoutes.home)`.
@@ -37,6 +39,7 @@ abstract final class AppRoutes {
   static const notifications = '/notifications';
   static const restaurant = '/restaurant';
   static const dishes = '/dishes';
+  static const dish = '/dish';
   static const comingSoon = '/coming-soon';
 
   /// The screen for a route name. `verify` takes the phone number,
@@ -44,7 +47,8 @@ abstract final class AppRoutes {
   /// photo path as the argument. `forgotPassword` takes an optional email,
   /// `resetCode` a (method, contact) record, `newPassword` the reset token
   /// `search` a [Here], `restaurant` an (id, [Here]?) record, `dishes` a
-  /// [DishListArgs] and `comingSoon` a (title, when) record.
+  /// [DishListArgs], `dish` a ([MenuItem], [Here]?) record and `comingSoon`
+  /// a (title, when) record.
   static Widget? page(String? name, Object? arg) => switch (name) {
         onboarding => const OnboardingScreen(),
         welcome => const WelcomeScreen(),
@@ -69,6 +73,9 @@ abstract final class AppRoutes {
             (final id, final here) => RestaurantScreen(id: id, here: here),
           },
         dishes => DishListScreen(args: arg! as DishListArgs),
+        dish => switch (arg! as (MenuItem, Here?)) {
+            (final item, final here) => DishScreen(item: item, here: here),
+          },
         comingSoon => switch (arg! as (String, String)) {
             (final title, final phase) =>
               ComingSoonScreen(title: title, when: phase),

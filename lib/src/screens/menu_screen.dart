@@ -23,6 +23,7 @@ class MenuTab extends StatefulWidget {
     required this.onRetry,
     required this.filter,
     required this.onFilterChanged,
+    required this.actions,
     super.key,
   });
 
@@ -31,6 +32,7 @@ class MenuTab extends StatefulWidget {
   final VoidCallback onRetry;
   final MenuFilter filter;
   final ValueChanged<MenuFilter> onFilterChanged;
+  final ShopActions actions;
 
   @override
   State<MenuTab> createState() => _MenuTabState();
@@ -66,9 +68,16 @@ class _MenuTabState extends State<MenuTab> {
 
   @override
   Widget build(BuildContext context) {
+    final area = widget.here?.area;
     return SheetScaffold(
-      title: 'Menu',
-      showBack: false,
+      headerHeight: ShopTabHeader.height,
+      header: ShopTabHeader(
+        actions: widget.actions,
+        title: 'Menu',
+        line: area == null || area.isEmpty
+            ? 'Dishes near you'
+            : 'Dishes near $area',
+      ),
       child: Column(
         children: [
           const SizedBox(height: 34),
@@ -172,7 +181,7 @@ class _MenuTabState extends State<MenuTab> {
             separatorBuilder: (context, i) => const Divider(height: 8),
             itemBuilder: (context, i) => DishRow(
               item: items[i],
-              onTap: () => openRestaurant(context, items[i].restaurantId, here),
+              onTap: () => openDish(context, items[i], here),
             ),
           ),
         );
