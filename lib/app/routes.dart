@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:food_ninja/src/screens/cart_screen.dart';
 import 'package:food_ninja/src/screens/dish_list_screen.dart';
 import 'package:food_ninja/src/screens/dish_screen.dart';
 import 'package:food_ninja/src/screens/forgot_password_screen.dart';
@@ -40,6 +41,7 @@ abstract final class AppRoutes {
   static const restaurant = '/restaurant';
   static const dishes = '/dishes';
   static const dish = '/dish';
+  static const cart = '/cart';
   static const comingSoon = '/coming-soon';
 
   /// The screen for a route name. `verify` takes the phone number,
@@ -76,6 +78,7 @@ abstract final class AppRoutes {
         dish => switch (arg! as (MenuItem, Here?)) {
             (final item, final here) => DishScreen(item: item, here: here),
           },
+        cart => const CartScreen(),
         comingSoon => switch (arg! as (String, String)) {
             (final title, final phase) =>
               ComingSoonScreen(title: title, when: phase),

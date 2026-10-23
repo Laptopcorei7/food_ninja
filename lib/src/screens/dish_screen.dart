@@ -96,17 +96,31 @@ class _DishScreenState extends State<DishScreen> {
     try {
       await _catalog.addToCart(_dish.id, _qty, optionId: _option?.id);
       if (!mounted) return;
+      // The snackbar outlives this page: taken now, the navigator still
+      // works if the user goes back before tapping View cart.
+      final navigator = Navigator.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text('Added $_qty × ${_dish.name} to your cart'),
+            content: Row(
+              children: [
+                const ImageIcon(
+                  AppIcons.checkCircle,
+                  size: 22,
+                  color: AppColors.yellow,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Added $_qty × ${_dish.name} to your cart'),
+                ),
+              ],
+            ),
+            // With an action Flutter keeps a snackbar until it is tapped.
+            persist: false,
             action: SnackBarAction(
               label: 'View cart',
-              onPressed: () => Navigator.of(context).pushNamed(
-                AppRoutes.comingSoon,
-                arguments: ('Cart', 'phase 5'),
-              ),
+              onPressed: () => navigator.pushNamed(AppRoutes.cart),
             ),
           ),
         );
