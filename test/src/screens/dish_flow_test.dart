@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/screens/cart_screen.dart';
 import 'package:food_ninja/src/screens/dish_screen.dart';
 import 'package:food_ninja/src/screens/home_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
@@ -221,6 +223,47 @@ void main() {
     expect(sent, {'menuItemId': 'm1', 'qty': 2, 'optionId': 'o3'});
     expect(CatalogService.cartCount.value, 3);
     expect(find.text('Added 2 × Pepperoni Pizza to your cart'), findsOneWidget);
+    // It goes away by itself even though it has an action.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 2 × Pepperoni Pizza to your cart'), findsNothing);
+  });
+
+  testWidgets('View cart still works after leaving the dish page',
+      (tester) async {
+    final server = _server();
+    tester.view.physicalSize = const Size(400 * 3, 1600 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await server.run(() async {
+      await tester.pumpApp(
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context)
+                  .pushNamed(AppRoutes.dish, arguments: (_listItem, _here)),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.textContaining('Add to Cart'),
+        200,
+        scrollable: _list,
+      );
+      await tester.tap(find.textContaining('Add to Cart'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      // The snackbar outlived the page that showed it.
+      await tester.tap(find.text('View cart'));
+      await tester.pumpAndSettle();
+    });
+    expect(tester.takeException(), isNull);
+    expect(find.byType(CartScreen), findsOneWidget);
   });
 
   testWidgets('quantity stays between 1 and 99', (tester) async {

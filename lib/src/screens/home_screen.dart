@@ -80,8 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context).pushNamed(AppRoutes.search, arguments: here);
       }
     },
-    cart: () => Navigator.of(context)
-        .pushNamed(AppRoutes.comingSoon, arguments: ('Cart', 'phase 5')),
+    cart: () => Navigator.of(context).pushNamed(AppRoutes.cart),
     bell: () => Navigator.of(context).pushNamed(AppRoutes.notifications),
     profile: () => _scaffold.currentState?.openEndDrawer(),
   );

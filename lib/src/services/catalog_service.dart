@@ -184,6 +184,109 @@ class Voucher {
   final String? photoUrl;
 }
 
+/// One dish line in a cart order. [price] is for one, portion included.
+@immutable
+class CartLine {
+  const CartLine({
+    required this.id,
+    required this.menuItemId,
+    required this.name,
+    required this.photoUrl,
+    required this.qty,
+    required this.price,
+    this.optionName,
+  });
+
+  factory CartLine.fromJson(Map<String, dynamic> json) => CartLine(
+        id: json['_id'] as String,
+        menuItemId: json['menuItemId'] as String?,
+        name: json['name'] as String? ?? '',
+        photoUrl: json['photoUrl'] as String?,
+        qty: (json['qty'] as num?)?.toInt() ?? 1,
+        price: (json['price'] as num?)?.toDouble() ?? 0,
+        optionName: json['optionName'] as String?,
+      );
+
+  final String id;
+  final String? menuItemId;
+  final String name;
+  final String? photoUrl;
+  final int qty;
+  final double price;
+  final String? optionName;
+}
+
+/// One restaurant's pending order: the part of the cart it delivers.
+@immutable
+class CartOrder {
+  const CartOrder({
+    required this.id,
+    required this.restaurantName,
+    required this.lines,
+    required this.subTotal,
+    required this.deliveryCharge,
+  });
+
+  factory CartOrder.fromJson(Map<String, dynamic> json) {
+    final items = [...?(json['items'] as List?)].cast<Map<String, dynamic>>();
+    return CartOrder(
+      id: json['_id'] as String,
+      // Each line carries its restaurant's name; the order has only the id.
+      restaurantName: items.firstOrNull?['restaurantName'] as String?,
+      lines: items.map(CartLine.fromJson).toList(),
+      subTotal: (json['subTotal'] as num?)?.toDouble() ?? 0,
+      deliveryCharge: (json['deliveryCharge'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final String id;
+  final String? restaurantName;
+  final List<CartLine> lines;
+  final double subTotal;
+  final double deliveryCharge;
+}
+
+/// The user's cart: an order per restaurant and the money for all of them,
+/// summed by the server.
+@immutable
+class Cart {
+  const Cart({
+    required this.orders,
+    required this.count,
+    required this.subTotal,
+    required this.deliveryCharge,
+    required this.discount,
+    required this.total,
+  });
+
+  factory Cart.fromJson(Map<String, dynamic> json) {
+    final summary = json['summary'] as Map<String, dynamic>? ?? const {};
+    double money(String key) => (summary[key] as num?)?.toDouble() ?? 0;
+    return Cart(
+      orders: [...?(json['orders'] as List?)]
+          .cast<Map<String, dynamic>>()
+          .map(CartOrder.fromJson)
+          .toList(),
+      count: (json['cartCount'] as num?)?.toInt() ?? 0,
+      subTotal: money('subTotal'),
+      deliveryCharge: money('deliveryCharge'),
+      discount: money('discount'),
+      total: money('total'),
+    );
+  }
+
+  final List<CartOrder> orders;
+
+  /// Dishes across all orders, counting quantities.
+  final int count;
+  final double subTotal;
+  final double deliveryCharge;
+  final double discount;
+  final double total;
+
+  bool get isEmpty => orders.isEmpty;
+}
+
 /// What the Menu tab shows, set by its category strip and the Filter screen.
 @immutable
 class MenuFilter {
@@ -396,8 +499,27 @@ class CatalogService {
     _setCartCount(data);
   }
 
-  Future<void> refreshCartCount() async =>
-      _setCartCount(await _get('cart', {}));
+  Future<void> refreshCartCount() async => await cart();
+
+  /// The whole cart. Also updates [cartCount].
+  Future<Cart> cart() async {
+    final data = await _get('cart', {});
+    if (data is! Map<String, dynamic>) throw _unexpected('cart');
+    _setCartCount(data);
+    return Cart.fromJson(data);
+  }
+
+  /// Sets a cart line's quantity (1 to 99) and returns the new cart.
+  Future<Cart> setCartQty(String orderId, String lineId, int qty) async {
+    await _send('PUT', 'orders/$orderId/items/$lineId', body: {'qty': qty});
+    return await cart();
+  }
+
+  /// Takes a dish out of the cart and returns the new cart.
+  Future<Cart> removeCartLine(String orderId, String lineId) async {
+    await _send('DELETE', 'orders/$orderId/items/$lineId');
+    return await cart();
+  }
 
   void _setCartCount(Object? data) {
     final count = data is Map<String, dynamic> ? data['cartCount'] : null;

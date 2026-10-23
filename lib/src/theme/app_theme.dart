@@ -92,6 +92,22 @@ abstract final class AppTheme {
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       dividerTheme: DividerThemeData(color: c.divider, thickness: 1, space: 1),
+      // Every message: a dark-brown card floating above the bottom edge, with
+      // the kit's orange pill for its action.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.brown,
+        contentTextStyle: const TextStyle(
+          fontFamily: 'LeagueSpartan',
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.cream,
+        ),
+        actionTextColor: Colors.white,
+        actionBackgroundColor: AppColors.orange,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
       extensions: [c],
     );
   }
