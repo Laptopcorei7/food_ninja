@@ -284,10 +284,7 @@ class _CartScreenState extends State<CartScreen> {
               // Checkout reads the cart from the server, so wait for it.
               onPress: _saving
                   ? null
-                  : () => Navigator.of(context).pushNamed(
-                        AppRoutes.comingSoon,
-                        arguments: ('Checkout', 'the next step of phase 5'),
-                      ),
+                  : () => Navigator.of(context).pushNamed(AppRoutes.checkout),
             ),
           ),
         ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/services/location_service.dart';
 import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
@@ -129,25 +130,13 @@ class _SetLocationScreenState extends State<SetLocationScreen> {
     for (var attempt = 1;; attempt++) {
       try {
         final places = await _geocoding.placemarkFromCoordinates(lat, lng);
-        return places.isEmpty ? '' : _format(places.first);
+        return places.isEmpty ? '' : formatPlacemark(places.first);
       } on PlatformException catch (e) {
         if (attempt == 2) rethrow;
         debugPrint('[SetLocation] geocoding failed, retrying: $e');
         await Future<void>.delayed(const Duration(seconds: 1));
       }
     }
-  }
-
-  /// "4 Liberation Road, Osu, Accra": street, area and city, skipping blanks
-  /// and repeats.
-  String _format(Placemark place) {
-    final parts = <String>[];
-    for (final part in [place.street, place.subLocality, place.locality]) {
-      if (part != null && part.isNotEmpty && !parts.contains(part)) {
-        parts.add(part);
-      }
-    }
-    return parts.join(', ');
   }
 
   void _setStatus(String? status) {

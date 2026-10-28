@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/sheet_scaffold.dart';
@@ -74,9 +75,15 @@ class AuthTextField extends StatelessWidget {
     this.autofillHints,
     this.textInputAction = TextInputAction.next,
     this.onSubmitted,
+    this.onChanged,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
     super.key,
   });
 
+  final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
   final TextEditingController controller;
   final String label;
   final String? hint;
@@ -109,6 +116,9 @@ class AuthTextField extends StatelessWidget {
               autofillHints: autofillHints,
               textInputAction: textInputAction,
               onSubmitted: onSubmitted,
+              onChanged: onChanged,
+              inputFormatters: inputFormatters,
+              textCapitalization: textCapitalization,
               style: Theme.of(context).textTheme.bodyLarge,
               decoration: InputDecoration(hintText: hint, suffixIcon: suffix),
             ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
+import 'package:food_ninja/src/services/location_service.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:http/http.dart' as http;
 
@@ -287,6 +288,149 @@ class Cart {
   bool get isEmpty => orders.isEmpty;
 }
 
+/// A saved way to pay, or [cash], which the server keeps no record of.
+/// Only the brand or network and the last 4 digits are ever stored.
+@immutable
+class PaymentMethod {
+  const PaymentMethod({
+    required this.id,
+    required this.type,
+    this.brand,
+    this.network,
+    this.last4,
+  });
+
+  factory PaymentMethod.fromJson(Map<String, dynamic> json) => PaymentMethod(
+        id: json['_id'] as String?,
+        type: json['type'] as String? ?? 'card',
+        brand: json['brand'] as String?,
+        network: json['network'] as String?,
+        last4: json['last4'] as String?,
+      );
+
+  static const cash = PaymentMethod(id: null, type: 'cash');
+
+  /// Null only for [cash].
+  final String? id;
+
+  /// 'card', 'momo', 'paypal' or 'cash'.
+  final String type;
+
+  /// 'visa' or 'mastercard', on a card.
+  final String? brand;
+
+  /// 'mtn', 'telecel' or 'airteltigo', on mobile money.
+  final String? network;
+  final String? last4;
+
+  static const networks = {
+    'mtn': 'MTN MoMo',
+    'telecel': 'Telecel Cash',
+    'airteltigo': 'AirtelTigo Money',
+  };
+
+  /// A card or wallet chosen at sign-up whose number was never entered.
+  bool get needsDetails => (type == 'card' || type == 'momo') && last4 == null;
+
+  /// "Visa", "MTN MoMo", "PayPal", "Cash on delivery".
+  String get name => switch (type) {
+        'cash' => 'Cash on delivery',
+        'paypal' => 'PayPal',
+        'momo' => networks[network] ?? 'Mobile money',
+        _ => switch (brand) {
+            'visa' => 'Visa',
+            'mastercard' => 'Mastercard',
+            _ => 'Bank card',
+          },
+      };
+
+  /// "•••• 4242", or null when there are no digits to show.
+  String? get masked => last4 == null ? null : '•••• $last4';
+}
+
+/// What a voucher code takes off this cart.
+@immutable
+class VoucherCheck {
+  const VoucherCheck({
+    required this.code,
+    required this.title,
+    required this.discount,
+    required this.total,
+  });
+
+  final String code;
+  final String title;
+  final double discount;
+  final double total;
+}
+
+/// A placed order: one restaurant's part of a checkout, with its progress.
+@immutable
+class PlacedOrder {
+  const PlacedOrder({
+    required this.id,
+    required this.restaurantName,
+    required this.status,
+    required this.history,
+    required this.estimatedMinutes,
+    required this.total,
+    required this.address,
+    required this.lines,
+  });
+
+  factory PlacedOrder.fromJson(Map<String, dynamic> json) {
+    final items = [...?(json['items'] as List?)].cast<Map<String, dynamic>>();
+    final address = json['deliveryAddress'];
+    return PlacedOrder(
+      id: json['_id'] as String,
+      restaurantName: items.firstOrNull?['restaurantName'] as String?,
+      status: json['status'] as String? ?? 'placed',
+      history: {
+        for (final step in [...?(json['statusHistory'] as List?)]
+            .cast<Map<String, dynamic>>())
+          if (DateTime.tryParse(step['at'] as String? ?? '') case final at?)
+            step['status'] as String: at.toLocal(),
+      },
+      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      address: address is Map<String, dynamic>
+          ? DeliveryAddress.fromJson(address)
+          : null,
+      lines: items.map(CartLine.fromJson).toList(),
+    );
+  }
+
+  /// The steps an order goes through after checkout, in order.
+  static const steps = [
+    'placed',
+    'accepted',
+    'preparing',
+    'on_the_way',
+    'delivered',
+  ];
+
+  final String id;
+  final String? restaurantName;
+
+  /// One of [steps], or 'cancelled'.
+  final String status;
+
+  /// Status -> when the order reached it.
+  final Map<String, DateTime> history;
+  final int? estimatedMinutes;
+  final double total;
+  final DeliveryAddress? address;
+  final List<CartLine> lines;
+
+  DateTime? get placedAt => history['placed'];
+
+  /// When it should arrive: placed time plus the server's estimate.
+  DateTime? get arrivesBy => switch ((placedAt, estimatedMinutes)) {
+        (final at?, final mins?) => at.add(Duration(minutes: mins)),
+        _ => null,
+      };
+}
+
 /// What the Menu tab shows, set by its category strip and the Filter screen.
 @immutable
 class MenuFilter {
@@ -521,6 +665,127 @@ class CatalogService {
     return await cart();
   }
 
+  /// What [code] takes off the cart. Throws the server's reason when it
+  /// doesn't apply ("This voucher has expired").
+  Future<VoucherCheck> checkVoucher(String code) async {
+    final data = await _send('POST', 'cart/voucher', body: {'code': code});
+    if (data is! Map<String, dynamic>) throw _unexpected('voucher');
+    final voucher = data['voucher'] as Map<String, dynamic>? ?? const {};
+    final summary = data['summary'] as Map<String, dynamic>? ?? const {};
+    return VoucherCheck(
+      code: voucher['code'] as String? ?? code.trim().toUpperCase(),
+      title: voucher['title'] as String? ?? '',
+      discount: (summary['discount'] as num?)?.toDouble() ?? 0,
+      total: (summary['total'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  /// Places every restaurant's order in the cart at once. The server
+  /// refuses (409) when the cart changed since it was shown.
+  Future<List<PlacedOrder>> placeOrder({
+    required DeliveryAddress address,
+    required PaymentMethod payment,
+    String? voucherCode,
+  }) async {
+    final data = await _send(
+      'POST',
+      'cart/place',
+      body: {
+        'deliveryAddress': address.toJson(),
+        if (payment.id case final id?)
+          'paymentMethodId': id
+        else
+          'paymentType': 'cash',
+        if (voucherCode != null) 'voucherCode': voucherCode,
+      },
+    );
+    if (data is! Map<String, dynamic>) throw _unexpected('order');
+    cartCount.value = 0;
+    return [...?(data['orders'] as List?)]
+        .cast<Map<String, dynamic>>()
+        .map(PlacedOrder.fromJson)
+        .toList();
+  }
+
+  Future<PlacedOrder> order(String id) async {
+    final data = await _get('orders/$id', {});
+    if (data is! Map<String, dynamic>) throw _unexpected('order');
+    return PlacedOrder.fromJson(data);
+  }
+
+  /// The user's saved delivery addresses, oldest first.
+  Future<List<DeliveryAddress>> addresses() async {
+    final data = await _get('users/me/addresses', {});
+    final list = data is Map<String, dynamic> ? data['addresses'] : null;
+    return [...?(list as List?)]
+        .cast<Map<String, dynamic>>()
+        .map(DeliveryAddress.fromJson)
+        .toList();
+  }
+
+  /// Saves [address] under [label] ("Home") and returns it with its id.
+  Future<DeliveryAddress> addAddress(
+    String label,
+    DeliveryAddress address,
+  ) async {
+    final data = await _send(
+      'POST',
+      'users/me/addresses',
+      body: {'label': label, ...address.toJson()},
+    );
+    final saved = data is Map<String, dynamic> ? data['address'] : null;
+    if (saved is! Map<String, dynamic>) throw _unexpected('address');
+    return DeliveryAddress.fromJson(saved);
+  }
+
+  Future<List<PaymentMethod>> paymentMethods() async {
+    final data = await _get('users/me/payment-methods', {});
+    final list = data is Map<String, dynamic> ? data['paymentMethods'] : null;
+    return [...?(list as List?)]
+        .cast<Map<String, dynamic>>()
+        .map(PaymentMethod.fromJson)
+        .toList();
+  }
+
+  /// Saves a card or wallet. Only [brand] or [network] and [last4] go to
+  /// the server, never the full number.
+  Future<PaymentMethod> addPaymentMethod(
+    String type, {
+    String? brand,
+    String? network,
+    String? last4,
+  }) =>
+      _savePayment('POST', 'users/me/payment-methods', {
+        'type': type,
+        if (brand != null) 'brand': brand,
+        if (network != null) 'network': network,
+        if (last4 != null) 'last4': last4,
+      });
+
+  /// Adds the digits to a method chosen at sign-up without them.
+  Future<PaymentMethod> updatePaymentMethod(
+    String id, {
+    String? brand,
+    String? network,
+    String? last4,
+  }) =>
+      _savePayment('PATCH', 'users/me/payment-methods/$id', {
+        if (brand != null) 'brand': brand,
+        if (network != null) 'network': network,
+        if (last4 != null) 'last4': last4,
+      });
+
+  Future<PaymentMethod> _savePayment(
+    String method,
+    String path,
+    Map<String, Object?> body,
+  ) async {
+    final data = await _send(method, path, body: body);
+    final saved = data is Map<String, dynamic> ? data['paymentMethod'] : null;
+    if (saved is! Map<String, dynamic>) throw _unexpected('payment method');
+    return PaymentMethod.fromJson(saved);
+  }
+
   void _setCartCount(Object? data) {
     final count = data is Map<String, dynamic> ? data['cartCount'] : null;
     if (count is num) cartCount.value = count.toInt();
@@ -569,6 +834,7 @@ class CatalogService {
       response = await switch (method) {
         'POST' => http.post(uri, headers: headers, body: encoded),
         'PUT' => http.put(uri, headers: headers, body: encoded),
+        'PATCH' => http.patch(uri, headers: headers, body: encoded),
         'DELETE' => http.delete(uri, headers: headers),
         _ => http.get(uri, headers: headers),
       }

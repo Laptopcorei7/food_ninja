@@ -6,6 +6,7 @@ import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/widgets/app_dialog.dart';
+import 'package:food_ninja/src/widgets/custom_checkboxes.dart';
 import 'package:food_ninja/src/widgets/setup_layout.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
@@ -33,7 +34,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       label: 'PayPal',
       logo: 'assets/images/paypal.png',
       type: 'paypal',
-      brand: 'PayPal',
     ),
   ];
 
@@ -56,7 +56,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     unawaited(showLoadingOverlay(context));
     final nav = Navigator.of(context);
     try {
-      await _userService.addPaymentMethod(option.type, brand: option.brand);
+      await _userService.addPaymentMethod(option.type);
       if (!mounted) return;
       nav.pop(); // dismiss overlay
       await nav.pushNamed(AppRoutes.uploadPhoto);
@@ -137,39 +137,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       ),
                     ),
                   ),
-                _Radio(selected: isSelected),
+                KitRadio(selected: isSelected),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The kit's radio: orange ring, filled centre when chosen.
-class _Radio extends StatelessWidget {
-  const _Radio({required this.selected});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.orange, width: 1.5),
-      ),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 150),
-        scale: selected ? 1 : 0,
-        child: const DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.orange,
           ),
         ),
       ),
@@ -184,7 +154,6 @@ class _PaymentOption {
     required this.type,
     this.icon,
     this.logo,
-    this.brand,
   });
 
   final String id;
@@ -196,5 +165,4 @@ class _PaymentOption {
   /// Brand wordmark shown instead of icon and label.
   final String? logo;
   final String type;
-  final String? brand;
 }
