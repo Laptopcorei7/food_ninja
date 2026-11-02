@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/services/location_service.dart';
+import 'package:food_ninja/src/services/user_service.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
 import 'package:http/http.dart' as http;
 
@@ -491,6 +492,7 @@ class OrderTracking {
     required this.etaMinutes,
     required this.progress,
     required this.route,
+    this.riderPhone,
   });
 
   factory OrderTracking.fromJson(Map<String, dynamic> json) {
@@ -507,6 +509,8 @@ class OrderTracking {
       rider: _point(rider),
       riderName:
           rider is Map<String, dynamic> ? rider['name'] as String? : null,
+      riderPhone:
+          rider is Map<String, dynamic> ? rider['phone'] as String? : null,
       etaMinutes: (json['etaMinutes'] as num?)?.toInt(),
       progress: ((json['progress'] as num?)?.toDouble() ?? 0).clamp(0, 1),
       route: route is List ? route.map(_point).nonNulls.toList() : const [],
@@ -521,6 +525,9 @@ class OrderTracking {
   /// Null until the rider sets off.
   final GeoPoint? rider;
   final String? riderName;
+
+  /// What "Call your rider" dials.
+  final String? riderPhone;
   final int? etaMinutes;
 
   /// How far along the ride is, 0 to 1.
@@ -529,6 +536,135 @@ class OrderTracking {
   /// The road from the restaurant to the address; empty when the server
   /// could not get one.
   final List<GeoPoint> route;
+}
+
+/// A reply the bot offers as a button; tapping it sends its value.
+typedef ChatOption = ({String label, String value});
+
+/// The order a support message is about.
+typedef ChatOrder = ({String id, String number, String items, DateTime? at});
+
+/// One chat message. [from] is relative to the user: 'me', 'bot', 'staff'
+/// or 'rider'.
+@immutable
+class ChatMessage {
+  const ChatMessage({
+    required this.id,
+    required this.from,
+    required this.at,
+    this.text,
+    this.imageUrl,
+    this.options = const [],
+    this.order,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final order = json['order'];
+    return ChatMessage(
+      id: json['_id'] as String,
+      from: json['from'] as String? ?? 'bot',
+      at: DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ??
+          DateTime.now(),
+      text: json['text'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      options: [
+        for (final o in [...?(json['options'] as List?)]
+            .cast<Map<String, dynamic>>())
+          (label: o['label'] as String, value: o['value'] as String),
+      ],
+      order: order is Map<String, dynamic>
+          ? (
+              id: order['_id'] as String,
+              number: order['number'] as String? ?? '',
+              items: order['items'] as String? ?? '',
+              at: DateTime.tryParse(order['placedAt'] as String? ?? '')
+                  ?.toLocal(),
+            )
+          : null,
+    );
+  }
+
+  final String id;
+  final String from;
+  final DateTime at;
+  final String? text;
+
+  /// May be a relative /uploads/ path; show it through mediaUrl().
+  final String? imageUrl;
+  final List<ChatOption> options;
+  final ChatOrder? order;
+
+  bool get mine => from == 'me';
+}
+
+/// A support thread, or the thread with one order's rider.
+@immutable
+class Chat {
+  const Chat({
+    required this.id,
+    required this.kind,
+    required this.messages,
+    this.status,
+    this.riderName,
+  });
+
+  factory Chat.fromJson(Map<String, dynamic> json) => Chat(
+        id: json['_id'] as String,
+        kind: json['kind'] as String? ?? 'support',
+        status: json['status'] as String?,
+        riderName: json['riderName'] as String?,
+        messages: _messages(json['messages']),
+      );
+
+  final String id;
+
+  /// 'support' or 'rider'.
+  final String kind;
+
+  /// Support only: 'bot', 'waiting_staff' or 'staff'.
+  final String? status;
+  final String? riderName;
+  final List<ChatMessage> messages;
+}
+
+List<ChatMessage> _messages(Object? json) => [
+      for (final m in [...?(json as List?)].cast<Map<String, dynamic>>())
+        ChatMessage.fromJson(m),
+    ];
+
+/// A Help Center question; its category is general, account or services.
+typedef Faq = ({String category, String question, String answer});
+
+/// Help Center content from GET /help.
+@immutable
+class HelpInfo {
+  const HelpInfo({required this.faqs, required this.contact});
+
+  factory HelpInfo.fromJson(Map<String, dynamic> json) {
+    final contact = json['contact'];
+    return HelpInfo(
+      faqs: [
+        for (final f in [...?(json['faqs'] as List?)]
+            .cast<Map<String, dynamic>>())
+          (
+            category: f['category'] as String? ?? 'general',
+            question: f['question'] as String? ?? '',
+            answer: f['answer'] as String? ?? '',
+          ),
+      ],
+      contact: {
+        if (contact is Map<String, dynamic>)
+          for (final MapEntry(:key, :value) in contact.entries)
+            if (value is String && value.isNotEmpty) key: value,
+      },
+    );
+  }
+
+  final List<Faq> faqs;
+
+  /// phone, email, website, whatsapp, facebook, instagram; missing ones
+  /// are left out.
+  final Map<String, String> contact;
 }
 
 /// What the Menu tab shows, set by its category strip and the Filter screen.
@@ -851,6 +987,85 @@ class CatalogService {
     return OrderTracking.fromJson(data);
   }
 
+  /// The user's support thread; the server starts it with the bot's menu.
+  Future<Chat> supportChat() async => _chat(await _get('chats/support', {}));
+
+  /// The thread with order [orderId]'s rider. The server refuses (with a
+  /// message to show) until the rider has the order.
+  Future<Chat> riderChat(String orderId) async =>
+      _chat(await _get('orders/$orderId/chat', {}));
+
+  /// Messages in [chatId] newer than [after], oldest first.
+  Future<List<ChatMessage>> newMessages(String chatId, DateTime after) async {
+    final data = await _get(
+      'chats/$chatId/messages',
+      {'after': after.toUtc().toIso8601String()},
+    );
+    if (data is! Map<String, dynamic>) throw _unexpected('messages');
+    return _messages(data['messages']);
+  }
+
+  /// Sends [text], or the bot option [option]. Returns the user's message
+  /// and any bot replies.
+  Future<List<ChatMessage>> sendMessage(
+    String chatId, {
+    String? text,
+    String? option,
+  }) async {
+    final data = await _send(
+      'POST',
+      'chats/$chatId/messages',
+      body: {
+        if (text != null) 'text': text,
+        if (option != null) 'option': option,
+      },
+    );
+    if (data is! Map<String, dynamic>) throw _unexpected('message');
+    return _messages(data['messages']);
+  }
+
+  /// Sends the photo at [path] (jpeg, png or webp, up to 5 MB).
+  Future<List<ChatMessage>> sendPhoto(String chatId, String path) async {
+    final uri = Uri.parse('$_baseUrl/chats/$chatId/photo');
+    if (kDebugMode) debugPrint('[CatalogService] POST $uri (photo)');
+    final token = await AuthService().getToken();
+    if (token == null) throw SessionExpiredException();
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      // Without a content type the server's image filter rejects it.
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'photo',
+          path,
+          contentType: UserService.imageType(path),
+        ),
+      );
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(
+        await request.send().timeout(const Duration(seconds: 30)),
+      );
+    } catch (e) {
+      throw toUserError(e);
+    }
+    final data = _data(response, 'POST', 'photo');
+    if (data is! Map<String, dynamic>) throw _unexpected('photo');
+    return _messages(data['messages']);
+  }
+
+  /// FAQs and contact details for the Help Center.
+  Future<HelpInfo> help() async {
+    final data = await _get('help', {});
+    if (data is! Map<String, dynamic>) throw _unexpected('help');
+    return HelpInfo.fromJson(data);
+  }
+
+  Chat _chat(Object? data) {
+    final chat = data is Map<String, dynamic> ? data['chat'] : null;
+    if (chat is! Map<String, dynamic>) throw _unexpected('chat');
+    return Chat.fromJson(chat);
+  }
+
   /// Rates a delivered order once: [dishes] maps menu item ids to
   /// (stars, comment); dishes left out go unrated.
   Future<PlacedOrder> reviewOrder(
@@ -1026,7 +1241,11 @@ class CatalogService {
     } catch (e) {
       throw toUserError(e);
     }
+    return _data(response, method, path);
+  }
 
+  /// The body's `data`, or the error the response stands for.
+  Object? _data(http.Response response, String method, String path) {
     if (response.statusCode == 401) throw SessionExpiredException();
     final decoded = decodeBody(response);
     if (response.statusCode == 429) {

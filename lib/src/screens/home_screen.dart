@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/screens/dish_list_screen.dart';
 import 'package:food_ninja/src/screens/favorites_screen.dart';
+import 'package:food_ninja/src/screens/help_screen.dart';
 import 'package:food_ninja/src/screens/menu_screen.dart';
 import 'package:food_ninja/src/screens/orders_screen.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
@@ -116,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FavoritesTab(here: _here, active: _tab == 2),
           OrdersTab(active: _tab == 3),
-          const ComingSoonTab(title: 'Help', when: 'phase 7'),
+          const HelpTab(),
         ],
       ),
       bottomNavigationBar: AppBottomNav(
@@ -828,25 +829,6 @@ class _Who extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A tab whose screens come in a later phase.
-class ComingSoonTab extends StatelessWidget {
-  const ComingSoonTab({required this.title, required this.when, super.key});
-
-  final String title;
-
-  /// "phase 6".
-  final String when;
-
-  @override
-  Widget build(BuildContext context) {
-    return SheetScaffold(
-      title: title,
-      showBack: false,
-      child: _soonBody(context, when),
     );
   }
 }

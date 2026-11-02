@@ -89,7 +89,7 @@ class UserService {
   }
 
   /// The server accepts jpeg, png and webp.
-  static MediaType _imageType(String path) {
+  static MediaType imageType(String path) {
     final ext = path.split('.').last.toLowerCase();
     return switch (ext) {
       'png' => MediaType('image', 'png'),
@@ -114,7 +114,7 @@ class UserService {
         await http.MultipartFile.fromPath(
           'photo',
           imagePath,
-          contentType: _imageType(imagePath),
+          contentType: imageType(imagePath),
         ),
       );
 

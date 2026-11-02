@@ -5,12 +5,14 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:food_ninja/src/screens/cancel_order_screen.dart';
+import 'package:food_ninja/src/screens/chat_screen.dart';
 import 'package:food_ninja/src/screens/order_placed_screen.dart';
 import 'package:food_ninja/src/screens/orders_screen.dart';
 import 'package:food_ninja/src/screens/review_screen.dart';
 import 'package:food_ninja/src/screens/tracking_screen.dart';
 import 'package:food_ninja/src/services/auth_service.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
+import 'package:food_ninja/src/utils/open_link.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -186,6 +188,21 @@ class _OrdersServer {
             ],
           }),
         );
+      case ('GET', 'orders/a2/chat'):
+        return FakeServer.reply(
+          200,
+          _ok({
+            'chat': {
+              '_id': 'chat-r',
+              'kind': 'rider',
+              'orderId': 'a2',
+              'riderName': 'Kwabena Owusu',
+              'messages': <Object>[],
+            },
+          }),
+        );
+      case ('GET', 'chats/chat-r/messages'):
+        return FakeServer.reply(200, _ok({'messages': <Object>[]}));
       case ('GET', 'orders/a2'):
         return FakeServer.reply(
           200,
@@ -450,8 +467,13 @@ void main() {
   });
 
   group('Live tracking', () {
-    testWidgets('shows the rider and offers calls for phase 7',
+    testWidgets('shows the rider, dials them and opens their chat',
         (tester) async {
+      final opened = <Uri>[];
+      launcher = (uri) async {
+        opened.add(uri);
+        return true;
+      };
       final s = _OrdersServer();
       await _pumpOrders(tester, s);
       await _tap(tester, s, find.text('Track').last);
@@ -473,7 +495,15 @@ void main() {
       );
 
       await _tap(tester, s, find.text('Call your rider'));
-      expect(find.textContaining('phase 7'), findsOneWidget);
+      expect(opened.single, Uri.parse('tel:+233200000000'));
+
+      await _tap(tester, s, find.text('Message your rider'));
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.text('Kwabena Owusu'), findsOneWidget);
+      expect(
+        find.text('Send Kwabena Owusu a message about this order.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('turns into Order Delivered, whose stars start the review',

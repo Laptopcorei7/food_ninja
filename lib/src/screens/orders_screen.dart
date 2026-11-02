@@ -12,6 +12,7 @@ import 'package:food_ninja/src/utils/session.dart';
 import 'package:food_ninja/src/widgets/food_photo.dart';
 import 'package:food_ninja/src/widgets/major_button.dart';
 import 'package:food_ninja/src/widgets/sheet_scaffold.dart';
+import 'package:food_ninja/src/widgets/tab_pills.dart';
 
 /// "29 Nov, 1:20 PM" in the phone's locale.
 String formatOrderTime(BuildContext context, DateTime at) {
@@ -211,7 +212,11 @@ class _OrdersTabState extends State<OrdersTab> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: _TabPills(selected: _tab, onSelect: _show),
+            child: TabPills(
+              tabs: OrdersTab.tabs,
+              selected: _tab,
+              onSelect: _show,
+            ),
           ),
           Divider(
             indent: 24,
@@ -283,56 +288,6 @@ class _OrdersTabState extends State<OrdersTab> {
                 );
               },
             ),
-    );
-  }
-}
-
-/// The three kit pills: the chosen one orange, the others peach.
-class _TabPills extends StatelessWidget {
-  const _TabPills({required this.selected, required this.onSelect});
-
-  final String selected;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      children: [
-        for (final MapEntry(key: tab, value: label) in OrdersTab.tabs.entries)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Semantics(
-                selected: tab == selected,
-                button: true,
-                child: Material(
-                  color: tab == selected ? AppColors.orange : colors.soft,
-                  shape: const StadiumBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () => onSelect(tab),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: tab == selected
-                              ? Colors.white
-                              : colors.accentText,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

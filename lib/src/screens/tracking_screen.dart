@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/screens/cancel_order_screen.dart';
+import 'package:food_ninja/src/screens/chat_screen.dart';
 import 'package:food_ninja/src/screens/orders_screen.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
 import 'package:food_ninja/src/utils/network_error.dart';
+import 'package:food_ninja/src/utils/open_link.dart';
 import 'package:food_ninja/src/utils/session.dart';
 import 'package:food_ninja/src/widgets/sheet_scaffold.dart';
 import 'package:latlong2/latlong.dart';
@@ -125,9 +126,16 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     );
   }
 
-  void _contact() => Navigator.of(context).pushNamed(
-        AppRoutes.comingSoon,
-        arguments: ('Calls and chat', 'phase 7'),
+  void _call(String phone) =>
+      openLink(context, Uri(scheme: 'tel', path: phone));
+
+  void _message(OrderTracking t) => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChatScreen.rider(
+            orderId: widget.order.id,
+            riderName: t.riderName,
+          ),
+        ),
       );
 
   @override
@@ -305,16 +313,18 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _ContactButton(
-                    label: 'Call your rider',
-                    icon: Icons.call_outlined,
-                    onTap: _contact,
-                  ),
-                  const SizedBox(height: 8),
+                  if (t.riderPhone case final phone?) ...[
+                    _ContactButton(
+                      label: 'Call your rider',
+                      icon: Icons.call_outlined,
+                      onTap: () => _call(phone),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   _ContactButton(
                     label: 'Message your rider',
                     icon: Icons.chat_bubble_outline_rounded,
-                    onTap: _contact,
+                    onTap: () => _message(t),
                   ),
                 ],
               ),
