@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:food_ninja/app/routes.dart';
+import 'package:food_ninja/src/screens/orders_screen.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/theme/app_colors.dart';
 import 'package:food_ninja/src/theme/app_icons.dart';
@@ -127,9 +127,9 @@ class OrderConfirmedScreen extends StatelessWidget {
   }
 }
 
-/// Where the orders are (kit 4.3-F, without the map until live tracking in
-/// phase 6): the address, each restaurant's estimate and its steps. Pull
-/// down to refresh.
+/// Where the orders are (kit 4.3-F; the map is on Live Tracking):
+/// the address, each restaurant's estimate and its steps. Pull down to
+/// refresh.
 class DeliveryTimeScreen extends StatefulWidget {
   const DeliveryTimeScreen({required this.orders, super.key});
 
@@ -206,7 +206,14 @@ class _DeliveryTimeScreenState extends State<DeliveryTimeScreen> {
                       ),
                     ),
                   ],
-                  for (final order in _orders) _OrderProgress(order),
+                  for (final order in _orders)
+                    _OrderProgress(
+                      order,
+                      // With several orders each gets its own Track button.
+                      onTrack: _orders.length > 1 && order.isActive
+                          ? () => openTracking(context, order)
+                          : null,
+                    ),
                 ],
               ),
             ),
@@ -228,18 +235,17 @@ class _DeliveryTimeScreenState extends State<DeliveryTimeScreen> {
                           .popUntil((route) => route.isFirst),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: MajorButton(
-                      horizontal: 20,
-                      vertical: 12,
-                      textonButton: 'Track order',
-                      onPress: () => Navigator.of(context).pushNamed(
-                        AppRoutes.comingSoon,
-                        arguments: ('Live tracking', 'phase 6'),
+                  if (_orders case [final only] when only.isActive) ...[
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: MajorButton(
+                        horizontal: 20,
+                        vertical: 12,
+                        textonButton: 'Track order',
+                        onPress: () => openTracking(context, only),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -252,9 +258,10 @@ class _DeliveryTimeScreenState extends State<DeliveryTimeScreen> {
 
 /// One restaurant's order: its estimate and the steps with their times.
 class _OrderProgress extends StatelessWidget {
-  const _OrderProgress(this.order);
+  const _OrderProgress(this.order, {this.onTrack});
 
   final PlacedOrder order;
+  final VoidCallback? onTrack;
 
   static const _labels = {
     'placed': 'Order placed',
@@ -290,6 +297,8 @@ class _OrderProgress extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onTrack != null)
+                TextButton(onPressed: onTrack, child: const Text('Track')),
             ],
           ),
           const SizedBox(height: 6),

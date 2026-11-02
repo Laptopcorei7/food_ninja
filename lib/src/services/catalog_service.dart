@@ -376,14 +376,25 @@ class PlacedOrder {
     required this.total,
     required this.address,
     required this.lines,
+    this.subTotal = 0,
+    this.deliveryCharge = 0,
+    this.discount = 0,
+    this.paymentType,
+    this.reviewed = false,
+    this.cancelReason,
   });
 
   factory PlacedOrder.fromJson(Map<String, dynamic> json) {
     final items = [...?(json['items'] as List?)].cast<Map<String, dynamic>>();
     final address = json['deliveryAddress'];
+    final restaurant = json['restaurant'];
+    double money(String key) => (json[key] as num?)?.toDouble() ?? 0;
     return PlacedOrder(
       id: json['_id'] as String,
-      restaurantName: items.firstOrNull?['restaurantName'] as String?,
+      restaurantName: (restaurant is Map<String, dynamic>
+              ? restaurant['name'] as String?
+              : null) ??
+          items.firstOrNull?['restaurantName'] as String?,
       status: json['status'] as String? ?? 'placed',
       history: {
         for (final step in [...?(json['statusHistory'] as List?)]
@@ -397,6 +408,12 @@ class PlacedOrder {
           ? DeliveryAddress.fromJson(address)
           : null,
       lines: items.map(CartLine.fromJson).toList(),
+      subTotal: money('subTotal'),
+      deliveryCharge: money('deliveryCharge'),
+      discount: money('discount'),
+      paymentType: json['paymentType'] as String?,
+      reviewed: json['reviewed'] == true,
+      cancelReason: json['cancelReason'] as String?,
     );
   }
 
@@ -421,14 +438,97 @@ class PlacedOrder {
   final double total;
   final DeliveryAddress? address;
   final List<CartLine> lines;
+  final double subTotal;
+  final double deliveryCharge;
+  final double discount;
+
+  /// 'card', 'momo', 'cash' or 'paypal'.
+  final String? paymentType;
+
+  /// True once the user rated it.
+  final bool reviewed;
+  final String? cancelReason;
 
   DateTime? get placedAt => history['placed'];
+
+  /// Dishes in the order, counting quantities.
+  int get itemCount => lines.fold(0, (n, line) => n + line.qty);
+
+  bool get isCancelled => status == 'cancelled';
+  bool get isDelivered => status == 'delivered';
+  bool get isActive => !isCancelled && !isDelivered;
+
+  /// The server takes cancellations until the kitchen starts.
+  bool get canCancel => status == 'placed' || status == 'accepted';
 
   /// When it should arrive: placed time plus the server's estimate.
   DateTime? get arrivesBy => switch ((placedAt, estimatedMinutes)) {
         (final at?, final mins?) => at.add(Duration(minutes: mins)),
         _ => null,
       };
+}
+
+/// A latitude, longitude pair.
+typedef GeoPoint = ({double lat, double lng});
+
+GeoPoint? _point(Object? json) {
+  if (json is! Map<String, dynamic>) return null;
+  final lat = (json['latitude'] as num?)?.toDouble();
+  final lng = (json['longitude'] as num?)?.toDouble();
+  return lat == null || lng == null ? null : (lat: lat, lng: lng);
+}
+
+/// Where an order and its rider are, from GET /orders/:id/tracking.
+@immutable
+class OrderTracking {
+  const OrderTracking({
+    required this.status,
+    required this.restaurantName,
+    required this.restaurant,
+    required this.destination,
+    required this.rider,
+    required this.riderName,
+    required this.etaMinutes,
+    required this.progress,
+    required this.route,
+  });
+
+  factory OrderTracking.fromJson(Map<String, dynamic> json) {
+    final restaurant = json['restaurant'];
+    final rider = json['rider'];
+    final route = json['route'];
+    return OrderTracking(
+      status: json['status'] as String? ?? 'placed',
+      restaurantName: restaurant is Map<String, dynamic>
+          ? restaurant['name'] as String?
+          : null,
+      restaurant: _point(restaurant),
+      destination: _point(json['destination']),
+      rider: _point(rider),
+      riderName:
+          rider is Map<String, dynamic> ? rider['name'] as String? : null,
+      etaMinutes: (json['etaMinutes'] as num?)?.toInt(),
+      progress: ((json['progress'] as num?)?.toDouble() ?? 0).clamp(0, 1),
+      route: route is List ? route.map(_point).nonNulls.toList() : const [],
+    );
+  }
+
+  final String status;
+  final String? restaurantName;
+  final GeoPoint? restaurant;
+  final GeoPoint? destination;
+
+  /// Null until the rider sets off.
+  final GeoPoint? rider;
+  final String? riderName;
+  final int? etaMinutes;
+
+  /// How far along the ride is, 0 to 1.
+  final double progress;
+
+  /// The road from the restaurant to the address; empty when the server
+  /// could not get one.
+  final List<GeoPoint> route;
 }
 
 /// What the Menu tab shows, set by its category strip and the Filter screen.
@@ -711,6 +811,90 @@ class CatalogService {
     final data = await _get('orders/$id', {});
     if (data is! Map<String, dynamic>) throw _unexpected('order');
     return PlacedOrder.fromJson(data);
+  }
+
+  /// One page of the user's placed orders, newest first. [tab] is
+  /// 'active', 'completed' or 'cancelled'. Also says whether more pages
+  /// follow.
+  Future<(List<PlacedOrder>, bool)> orders(String tab, {int page = 1}) async {
+    final data = await _get('orders', {
+      'tab': tab,
+      'page': '$page',
+      'limit': '20',
+    });
+    final orders = _items(data).map(PlacedOrder.fromJson).toList();
+    final totalPages = ((data! as Map)['totalPages'] as num?)?.toInt() ?? 1;
+    return (orders, page < totalPages);
+  }
+
+  /// Cancels an order the kitchen hasn't started. Throws the server's
+  /// reason when it is too late.
+  Future<PlacedOrder> cancelOrder(
+    String id, {
+    required String reason,
+    String? note,
+  }) async {
+    final data = await _send(
+      'POST',
+      'orders/$id/cancel',
+      body: {
+        'reason': reason,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return _order(data);
+  }
+
+  Future<OrderTracking> tracking(String id) async {
+    final data = await _get('orders/$id/tracking', {});
+    if (data is! Map<String, dynamic>) throw _unexpected('tracking');
+    return OrderTracking.fromJson(data);
+  }
+
+  /// Rates a delivered order once: [dishes] maps menu item ids to
+  /// (stars, comment); dishes left out go unrated.
+  Future<PlacedOrder> reviewOrder(
+    String id, {
+    required Map<String, (int, String)> dishes,
+    required int restaurantRating,
+    String? restaurantComment,
+  }) async {
+    Map<String, Object> rating(int stars, String? comment) => {
+          'rating': stars,
+          if (comment != null && comment.trim().isNotEmpty)
+            'comment': comment.trim(),
+        };
+    final data = await _send(
+      'POST',
+      'orders/$id/review',
+      body: {
+        'dishes': [
+          for (final MapEntry(key: id, value: (stars, comment))
+              in dishes.entries)
+            {'menuItemId': id, ...rating(stars, comment)},
+        ],
+        'restaurant': rating(restaurantRating, restaurantComment),
+      },
+    );
+    return _order(data);
+  }
+
+  /// Adds an old order's dishes to the cart. Returns how many lines were
+  /// added and the names of dishes no longer on the menu.
+  Future<(int, List<String>)> reorder(String id) async {
+    final data = await _send('POST', 'orders/$id/reorder');
+    if (data is! Map<String, dynamic>) throw _unexpected('cart');
+    _setCartCount(data);
+    return (
+      (data['added'] as num?)?.toInt() ?? 0,
+      [...?(data['skipped'] as List?)].cast<String>(),
+    );
+  }
+
+  PlacedOrder _order(Object? data) {
+    final order = data is Map<String, dynamic> ? data['order'] : null;
+    if (order is! Map<String, dynamic>) throw _unexpected('order');
+    return PlacedOrder.fromJson(order);
   }
 
   /// The user's saved delivery addresses, oldest first.

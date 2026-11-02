@@ -5,6 +5,7 @@ import 'package:food_ninja/app/routes.dart';
 import 'package:food_ninja/src/screens/dish_list_screen.dart';
 import 'package:food_ninja/src/screens/favorites_screen.dart';
 import 'package:food_ninja/src/screens/menu_screen.dart';
+import 'package:food_ninja/src/screens/orders_screen.dart';
 import 'package:food_ninja/src/services/catalog_service.dart';
 import 'package:food_ninja/src/services/location_service.dart';
 import 'package:food_ninja/src/services/user_service.dart';
@@ -114,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: _actions,
           ),
           FavoritesTab(here: _here, active: _tab == 2),
-          const ComingSoonTab(title: 'My Orders', when: 'phase 6'),
+          OrdersTab(active: _tab == 3),
           const ComingSoonTab(title: 'Help', when: 'phase 7'),
         ],
       ),
